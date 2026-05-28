@@ -5,6 +5,16 @@
 #include <string.h>
 #include <math.h>
 
+/* ---- Font discovery ---- */
+const char *ClayGPUCtx_find_font(const char **candidates) {
+    for (const char **p = candidates; *p; p++) {
+        SDL_PathInfo info;
+        if (SDL_GetPathInfo(*p, &info)) return *p;
+    }
+    return NULL;
+}
+
+
 /* ---- Column-major 4x4 matrix ---- */
 typedef struct { float m[4][4]; } Mat4;
 

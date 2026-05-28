@@ -57,4 +57,17 @@ void ClayGPUCtx_handle_event(ClayGPUCtx *ctx, const SDL_Event *e);
 void ClayGPUCtx_render(ClayGPUCtx *ctx, Clay_RenderCommandArray cmds);
 void ClayGPUCtx_destroy(ClayGPUCtx *ctx);
 
+/* ---- Font discovery helper ----
+ * Tries each path in `candidates` (NULL-terminated array) in order.
+ * Returns the first path whose file exists, or NULL if none found.
+ *
+ * Example:
+ *   const char *font = ClayGPUCtx_find_font((const char *[]){
+ *       "assets/Inter-Regular.ttf",
+ *       "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+ *       "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+ *       NULL });
+ */
+const char *ClayGPUCtx_find_font(const char **candidates);
+
 #endif /* CLAY_SDL3_GPU_H */

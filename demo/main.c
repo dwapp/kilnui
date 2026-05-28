@@ -293,8 +293,17 @@ int main(int argc, char *argv[]) {
     (void)argc; (void)argv;
 
     ClayGPUCtx ctx;
-    if (!ClayGPUCtx_init(&ctx, "Clay GPU Demo", 1280, 720,
-                         "assets/Inter-Regular.ttf", 16)) {
+    static const char *font_candidates[] = {
+        "assets/Inter-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/opentype/noto/NotoSans-Regular.ttf",
+        NULL
+    };
+    const char *font = ClayGPUCtx_find_font(font_candidates);
+    if (!font) { SDL_Log("No usable font found"); return 1; }
+    SDL_Log("Using font: %s", font);
+    if (!ClayGPUCtx_init(&ctx, "Clay GPU Demo", 1280, 720, font, 16)) {
         SDL_Log("Failed to initialize ClayGPUCtx");
         return 1;
     }

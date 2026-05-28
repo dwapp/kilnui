@@ -193,8 +193,17 @@ int main(int argc, char *argv[]) {
     (void)argc; (void)argv;
 
     ClayGPUCtx ctx;
-    if (!ClayGPUCtx_init(&ctx, "Button Gallery", 640, 600,
-                         "assets/Inter-Regular.ttf", 16)) {
+    static const char *font_candidates[] = {
+        "assets/Inter-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/opentype/noto/NotoSans-Regular.ttf",
+        NULL
+    };
+    const char *font = ClayGPUCtx_find_font(font_candidates);
+    if (!font) { SDL_Log("No usable font found"); return 1; }
+    SDL_Log("Using font: %s", font);
+    if (!ClayGPUCtx_init(&ctx, "Button Gallery", 640, 600, font, 16)) {
         SDL_Log("ClayGPUCtx_init failed");
         return 1;
     }
