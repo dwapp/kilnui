@@ -66,17 +66,39 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(clay_sdl3_gpu PUBLIC m)
 endif()
 
+# ---- Library: ui_components (reusable widgets) ----
+add_library(ui_components STATIC
+    src/ui/button.c
+)
+target_include_directories(ui_components PUBLIC
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/../clay
+)
+target_link_libraries(ui_components PUBLIC clay_sdl3_gpu)
+
 # ---- Demo executable ----
 add_executable(clay_demo demo/main.c)
 target_link_libraries(clay_demo PRIVATE clay_sdl3_gpu)
 add_dependencies(clay_demo shaders)
 
-# Copy shaders and assets to build dir
-add_custom_command(TARGET clay_demo POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${SHADER_OUT} $<TARGET_FILE_DIR:clay_demo>/shaders
-    COMMENT "Copying compiled shaders to output"
-)
-add_custom_command(TARGET clay_demo POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:clay_demo>/assets
-    COMMENT "Copying assets to output"
-)
+# ---- Button gallery demo ----
+add_executable(button_demo demo/button_demo.c)
+target_link_libraries(button_demo PRIVATE clay_sdl3_gpu ui_components)
+add_dependencies(button_demo shaders)
+
+# Helper macro: copy shaders + assets next to any demo executable
+macro(copy_demo_assets TARGET)
+    add_custom_command(TARGET ${TARGET} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${SHADER_OUT} $<TARGET_FILE_DIR:${TARGET}>/shaders
+        COMMENT "Copying shaders -> ${TARGET}"
+    )
+    add_custom_command(TARGET ${TARGET} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:${TARGET}>/assets
+        COMMENT "Copying assets -> ${TARGET}"
+    )
+endmacro()
+
+copy_demo_assets(clay_demo)
+copy_demo_assets(button_demo)
