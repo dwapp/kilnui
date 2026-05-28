@@ -26,6 +26,6 @@ CTestTestfile.cmake
 .DS_Store
 
 # Old single-file demo (superseded by demo/)
-main.c
-build.sh
-clay_gpu_demo
+/main.c
+/build.sh
+/clay_gpu_demo
