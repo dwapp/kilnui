@@ -43,7 +43,7 @@ static char g_count_str[64]        = "Click any button";
 
 /* ---- Section label ---- */
 static void section_label(const char *text, int idx) {
-    Clay_String s = { .chars = text, .length = (int32_t)strlen(text) };
+    Clay_String s = { .chars = text, .length = (int32_t)SDL_strlen(text) };
     CLAY(CLAY_SIDI(CLAY_STRING("SecLabel"), idx), {
         .layout = {
             .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(24) },
@@ -97,7 +97,7 @@ static void disabled_row(void) {
 static void counter_card(void) {
     Clay_String total_str = {
         .chars = g_count_str,
-        .length = (int32_t)strlen(g_count_str),
+        .length = (int32_t)SDL_strlen(g_count_str),
     };
     CLAY(CLAY_ID("CounterCard"), {
         .layout = {

@@ -68,7 +68,7 @@ static void ui_sidebar(void) {
         const char *labels[] = {"Dashboard", "Components", "Settings", "About"};
         Clay_Color colors[] = {COL_MAUVE, COL_GREEN, COL_PEACH, COL_BLUE};
         for (int i = 0; i < 4; i++) {
-            Clay_String lbl = {.chars = labels[i], .length = (int32_t)strlen(labels[i])};
+            Clay_String lbl = {.chars = labels[i], .length = (int32_t)SDL_strlen(labels[i])};
             Clay_ElementId eid = Clay_GetElementIdWithIndex(CLAY_STRING("Nav"), i);
             bool hovered = Clay_PointerOver(eid);
             CLAY(CLAY_SIDI(CLAY_STRING("Nav"), i), {
@@ -92,8 +92,8 @@ static void ui_sidebar(void) {
 /* ---- Stat card ---- */
 static void ui_stat_card(int idx, const char *title, const char *value,
                          Clay_Color accent) {
-    Clay_String t = {.chars = title, .length = (int32_t)strlen(title)};
-    Clay_String v = {.chars = value, .length = (int32_t)strlen(value)};
+    Clay_String t = {.chars = title, .length = (int32_t)SDL_strlen(title)};
+    Clay_String v = {.chars = value, .length = (int32_t)SDL_strlen(value)};
     Clay_ElementId eid = Clay_GetElementIdWithIndex(CLAY_STRING("Stat"), idx);
     bool hov = Clay_PointerOver(eid);
 
@@ -114,7 +114,7 @@ static void ui_stat_card(int idx, const char *title, const char *value,
 
 /* ---- Progress bar ---- */
 static void ui_progress(int idx, const char *label, float pct, Clay_Color color) {
-    Clay_String l = {.chars = label, .length = (int32_t)strlen(label)};
+    Clay_String l = {.chars = label, .length = (int32_t)SDL_strlen(label)};
     CLAY(CLAY_SIDI(CLAY_STRING("Prog"), idx), {
         .layout = {
             .sizing = {CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0)},
@@ -179,7 +179,7 @@ static void ui_scroll_list(void) {
                 "Memory: 12.4 MB used",
             };
             for (int i = 0; i < 15; i++) {
-                Clay_String s = {.chars = events[i], .length = (int32_t)strlen(events[i])};
+                Clay_String s = {.chars = events[i], .length = (int32_t)SDL_strlen(events[i])};
                 Clay_ElementId eid = Clay_GetElementIdWithIndex(CLAY_STRING("Evt"), i);
                 bool hov = Clay_PointerOver(eid);
                 CLAY(CLAY_SIDI(CLAY_STRING("Evt"), i), {

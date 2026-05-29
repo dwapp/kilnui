@@ -1,6 +1,7 @@
 /* src/ui/button.c — Reusable Clay button component implementation. */
 
 #include "button.h"
+#include <SDL3/SDL.h>
 #include <string.h>
 
 /* ---- Per-frame mouse state (set via UI_SetMouseState) ---- */
@@ -57,7 +58,7 @@ bool UI_Button(int uid, const char *label,
     Clay_Color bg = BG[variant][state];
     Clay_Color fg = FG[variant][disabled ? 1 : 0];
 
-    Clay_String lbl = { .chars = label, .length = (int32_t)strlen(label) };
+    Clay_String lbl = { .chars = label, .length = (int32_t)SDL_strlen(label) };
 
     CLAY(id, {
         .layout = {

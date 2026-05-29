@@ -153,7 +153,7 @@ static void clay_error(Clay_ErrorData e) { SDL_Log("Clay: %s", e.errorText.chars
 /* ---- Init ---- */
 bool ClayGPUCtx_init(ClayGPUCtx *ctx, const char *title,
                      int w, int h, const char *font_path, int font_size) {
-    memset(ctx, 0, sizeof(*ctx));
+    SDL_memset(ctx, 0, sizeof(*ctx));
 
     if (!SDL_Init(SDL_INIT_VIDEO)) { SDL_Log("SDL_Init: %s", SDL_GetError()); return false; }
     /* Prevent KWin from disabling the compositor (avoids tearing / bypass mode) */
@@ -323,11 +323,11 @@ static bool batch_add(UploadBatch *b, SDL_GPUDevice *gpu,
     b->regions[i].ibuf        = *out_ibuf;
     b->regions[i].vert_offset = s_staging_used;
     b->regions[i].vert_size   = (Uint32)vbytes;
-    memcpy(s_staging + s_staging_used, vdata, vbytes);
+    SDL_memcpy(s_staging + s_staging_used, vdata, vbytes);
     s_staging_used           += (Uint32)vbytes;
     b->regions[i].idx_offset  = s_staging_used;
     b->regions[i].idx_size    = (Uint32)ibytes;
-    memcpy(s_staging + s_staging_used, idata, ibytes);
+    SDL_memcpy(s_staging + s_staging_used, idata, ibytes);
     s_staging_used           += (Uint32)ibytes;
     b->total_bytes            = s_staging_used;
     return true;
@@ -343,7 +343,7 @@ static void batch_commit(UploadBatch *b, SDL_GPUDevice *gpu) {
             .size  = b->total_bytes,
         });
     void *mapped = SDL_MapGPUTransferBuffer(gpu, tbuf, false);
-    memcpy(mapped, s_staging, b->total_bytes);
+    SDL_memcpy(mapped, s_staging, b->total_bytes);
     SDL_UnmapGPUTransferBuffer(gpu, tbuf);
 
     SDL_GPUCommandBuffer *copy_cmd = SDL_AcquireGPUCommandBuffer(gpu);

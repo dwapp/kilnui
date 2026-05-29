@@ -36,7 +36,7 @@ static bool grow(GlyphCache *gc) {
     GlyphEntry *old_slots = gc->slots;
     uint32_t    new_cap   = old_cap * 2;
 
-    GlyphEntry *new_slots = (GlyphEntry *)calloc(new_cap, sizeof(GlyphEntry));
+    GlyphEntry *new_slots = (GlyphEntry *)SDL_calloc(new_cap, sizeof(GlyphEntry));
     if (!new_slots) return false;
 
     gc->slots    = new_slots;
@@ -50,7 +50,7 @@ static bool grow(GlyphCache *gc) {
             gc->count++;
         }
     }
-    free(old_slots);
+    SDL_free(old_slots);
     return true;
 }
 
@@ -60,7 +60,7 @@ bool GlyphCache_init(GlyphCache *gc, uint32_t initial_cap, SDL_GPUDevice *gpu) {
     uint32_t cap = 1;
     while (cap < initial_cap) cap <<= 1;
 
-    gc->slots    = (GlyphEntry *)calloc(cap, sizeof(GlyphEntry));
+    gc->slots    = (GlyphEntry *)SDL_calloc(cap, sizeof(GlyphEntry));
     gc->capacity = cap;
     gc->count    = 0;
     gc->gpu      = gpu;
@@ -114,7 +114,7 @@ static SDL_GPUTexture *upload_surface(SDL_GPUDevice *gpu, SDL_Surface *surf) {
 
     /* Map, copy, unmap */
     void *mapped = SDL_MapGPUTransferBuffer(gpu, tbuf, false);
-    memcpy(mapped, rgba->pixels, byte_size);
+    SDL_memcpy(mapped, rgba->pixels, byte_size);
     SDL_UnmapGPUTransferBuffer(gpu, tbuf);
 
     /* Upload via copy pass */
@@ -219,7 +219,7 @@ void GlyphCache_destroy(GlyphCache *gc) {
             SDL_ReleaseGPUTexture(gc->gpu, gc->slots[i].tex);
         }
     }
-    free(gc->slots);
+    SDL_free(gc->slots);
     gc->slots    = NULL;
     gc->capacity = 0;
     gc->count    = 0;
