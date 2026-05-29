@@ -3,14 +3,15 @@
 #ifndef CLAY_SDL3_GPU_H
 #define CLAY_SDL3_GPU_H
 
+#include "clay.h"
+#include "glyph_cache.h"
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <stdbool.h>
-#include "clay.h"
-#include "glyph_cache.h"
 
 /* ---- Vertex formats ---- */
-typedef struct {
+typedef struct
+{
     float pos_x, pos_y;
     float local_x, local_y;
     float size_w, size_h;
@@ -18,7 +19,8 @@ typedef struct {
     float r, g, b, a;
 } VertexRect;
 
-typedef struct {
+typedef struct
+{
     float pos_x, pos_y;
     float u, v;
     float r, g, b, a;
@@ -30,24 +32,25 @@ typedef struct {
 #define MAX_TEX_QUADS 8192
 
 /* ---- Main context ---- */
-typedef struct {
-    SDL_Window      *window;
-    SDL_GPUDevice   *gpu;
-    SDL_GPUTexture  *depth_tex;
-    TTF_Font        *font;
-    float            dpi_scale;
-    int              font_size;
+typedef struct
+{
+    SDL_Window *window;
+    SDL_GPUDevice *gpu;
+    SDL_GPUTexture *depth_tex;
+    TTF_Font *font;
+    float dpi_scale;
+    int font_size;
 
-    GlyphCache       glyph_cache;
+    GlyphCache glyph_cache;
 
     SDL_GPUGraphicsPipeline *pipeline_rect;
     SDL_GPUGraphicsPipeline *pipeline_text;
 
-    SDL_GPUSampler  *sampler_linear;
+    SDL_GPUSampler *sampler_linear;
 
     /* Clay memory */
-    void            *clay_mem;
-    Clay_Context    *clay_ctx;
+    void *clay_mem;
+    Clay_Context *clay_ctx;
 } ClayGPUCtx;
 
 /* ---- Public functions ---- */

@@ -5,153 +5,190 @@
  * Run:   ./button_demo
  */
 
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
 #include "../src/clay_sdl3_gpu.h"
 #include "../src/ui/button.h"
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 #include <stdio.h>
 #include <string.h>
 
 /* ---- Palette ---- */
-#define COL_BASE     (Clay_Color){ 30,  30,  46, 255}
-#define COL_SURFACE  (Clay_Color){ 49,  50,  68, 255}
-#define COL_MANTLE   (Clay_Color){ 24,  24,  37, 255}
-#define COL_TEXT     (Clay_Color){205, 214, 244, 255}
-#define COL_SUBTEXT  (Clay_Color){166, 173, 200, 255}
-#define COL_OVERLAY  (Clay_Color){ 88,  91, 112, 255}
-#define COL_MAUVE    (Clay_Color){203, 166, 247, 255}
+#define COL_BASE \
+    (Clay_Color) { 30, 30, 46, 255 }
+#define COL_SURFACE \
+    (Clay_Color) { 49, 50, 68, 255 }
+#define COL_MANTLE \
+    (Clay_Color) { 24, 24, 37, 255 }
+#define COL_TEXT \
+    (Clay_Color) { 205, 214, 244, 255 }
+#define COL_SUBTEXT \
+    (Clay_Color) { 166, 173, 200, 255 }
+#define COL_OVERLAY \
+    (Clay_Color) { 88, 91, 112, 255 }
+#define COL_MAUVE \
+    (Clay_Color) { 203, 166, 247, 255 }
 
 /* ---- Button unique IDs ---- */
-enum {
+enum
+{
     /* Row: Primary */
-    BTN_PRI_SM = 0, BTN_PRI_MD, BTN_PRI_LG,
+    BTN_PRI_SM = 0,
+    BTN_PRI_MD,
+    BTN_PRI_LG,
     /* Row: Secondary */
-    BTN_SEC_SM, BTN_SEC_MD, BTN_SEC_LG,
+    BTN_SEC_SM,
+    BTN_SEC_MD,
+    BTN_SEC_LG,
     /* Row: Ghost */
-    BTN_GHO_SM, BTN_GHO_MD, BTN_GHO_LG,
+    BTN_GHO_SM,
+    BTN_GHO_MD,
+    BTN_GHO_LG,
     /* Row: Danger */
-    BTN_DAN_SM, BTN_DAN_MD, BTN_DAN_LG,
+    BTN_DAN_SM,
+    BTN_DAN_MD,
+    BTN_DAN_LG,
     /* Row: Disabled */
-    BTN_DIS_PRI, BTN_DIS_SEC, BTN_DIS_GHO, BTN_DIS_DAN,
+    BTN_DIS_PRI,
+    BTN_DIS_SEC,
+    BTN_DIS_GHO,
+    BTN_DIS_DAN,
     BTN_ID_COUNT
 };
 
 /* ---- App state ---- */
-static int  g_clicks[BTN_ID_COUNT] = {0};
-static int  g_total_clicks         = 0;
-static char g_count_str[64]        = "Click any button";
+static int g_clicks[BTN_ID_COUNT] = { 0 };
+static int g_total_clicks = 0;
+static char g_count_str[64] = "Click any button";
 
 /* ---- Section label ---- */
-static void section_label(const char *text, int idx) {
+static void section_label(const char *text, int idx)
+{
     Clay_String s = { .chars = text, .length = (int32_t)SDL_strlen(text) };
     CLAY(CLAY_SIDI(CLAY_STRING("SecLabel"), idx), {
-        .layout = {
-            .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(24) },
-            .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
-        },
-    }) {
+                                                      .layout = {
+                                                          .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(24) },
+                                                          .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
+                                                      },
+                                                  })
+    {
         CLAY_TEXT(s, { .textColor = COL_SUBTEXT, .fontSize = 12 });
     }
 }
 
 /* ---- Horizontal button row ---- */
 static void btn_row(int id_sm, int id_md, int id_lg, const char *label,
-                    UIBtnVariant var, bool disabled) {
+                    UIBtnVariant var, bool disabled)
+{
     (void)label;
     CLAY(CLAY_SIDI(CLAY_STRING("BtnRow"), id_sm), {
-        .layout = {
-            .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) },
-            .childGap = 12,
-            .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
-        },
-    }) {
-        if (UI_Button(id_sm, "Small",  var, UI_BTN_SM, disabled)) {
-            g_clicks[id_sm]++; g_total_clicks++;
+                                                      .layout = {
+                                                          .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) },
+                                                          .childGap = 12,
+                                                          .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
+                                                      },
+                                                  })
+    {
+        if (UI_Button(id_sm, "Small", var, UI_BTN_SM, disabled)) {
+            g_clicks[id_sm]++;
+            g_total_clicks++;
         }
         if (UI_Button(id_md, "Medium", var, UI_BTN_MD, disabled)) {
-            g_clicks[id_md]++; g_total_clicks++;
+            g_clicks[id_md]++;
+            g_total_clicks++;
         }
-        if (UI_Button(id_lg, "Large",  var, UI_BTN_LG, disabled)) {
-            g_clicks[id_lg]++; g_total_clicks++;
+        if (UI_Button(id_lg, "Large", var, UI_BTN_LG, disabled)) {
+            g_clicks[id_lg]++;
+            g_total_clicks++;
         }
     }
 }
 
 /* ---- Disabled row ---- */
-static void disabled_row(void) {
+static void disabled_row(void)
+{
     CLAY(CLAY_ID("DisabledRow"), {
-        .layout = {
-            .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) },
-            .childGap = 12,
-            .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
-        },
-    }) {
-        UI_Button(BTN_DIS_PRI, "Primary",   UI_BTN_PRIMARY,   UI_BTN_MD, true);
+                                     .layout = {
+                                         .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) },
+                                         .childGap = 12,
+                                         .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
+                                     },
+                                 })
+    {
+        UI_Button(BTN_DIS_PRI, "Primary", UI_BTN_PRIMARY, UI_BTN_MD, true);
         UI_Button(BTN_DIS_SEC, "Secondary", UI_BTN_SECONDARY, UI_BTN_MD, true);
-        UI_Button(BTN_DIS_GHO, "Ghost",     UI_BTN_GHOST,     UI_BTN_MD, true);
-        UI_Button(BTN_DIS_DAN, "Danger",    UI_BTN_DANGER,    UI_BTN_MD, true);
+        UI_Button(BTN_DIS_GHO, "Ghost", UI_BTN_GHOST, UI_BTN_MD, true);
+        UI_Button(BTN_DIS_DAN, "Danger", UI_BTN_DANGER, UI_BTN_MD, true);
     }
 }
 
 /* ---- Counter card ---- */
-static void counter_card(void) {
+static void counter_card(void)
+{
     Clay_String total_str = {
         .chars = g_count_str,
         .length = (int32_t)SDL_strlen(g_count_str),
     };
     CLAY(CLAY_ID("CounterCard"), {
-        .layout = {
-            .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(72) },
-            .padding = { 20, 20, 16, 16 },
-            .childGap = 8,
-            .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
-        },
-        .backgroundColor = COL_MANTLE,
-        .cornerRadius = CLAY_CORNER_RADIUS(10),
-    }) {
+                                     .layout = {
+                                         .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(72) },
+                                         .padding = { 20, 20, 16, 16 },
+                                         .childGap = 8,
+                                         .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
+                                     },
+                                     .backgroundColor = COL_MANTLE,
+                                     .cornerRadius = CLAY_CORNER_RADIUS(10),
+                                 })
+    {
         CLAY_TEXT(CLAY_STRING("Click counter"), {
-            .textColor = COL_SUBTEXT, .fontSize = 12,
-        });
+                                                    .textColor = COL_SUBTEXT,
+                                                    .fontSize = 12,
+                                                });
         CLAY_TEXT(total_str, {
-            .textColor = COL_MAUVE, .fontSize = 22,
-        });
+                                 .textColor = COL_MAUVE,
+                                 .fontSize = 22,
+                             });
     }
 }
 
 /* ---- Root UI ---- */
-static void ui_build(void) {
+static void ui_build(void)
+{
     CLAY(CLAY_ID("Root"), {
-        .layout = {
-            .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
-            .padding = { 40, 40, 32, 32 },
-            .childGap = 0,
-            .layoutDirection = CLAY_TOP_TO_BOTTOM,
-        },
-        .backgroundColor = COL_BASE,
-    }) {
+                              .layout = {
+                                  .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
+                                  .padding = { 40, 40, 32, 32 },
+                                  .childGap = 0,
+                                  .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                              },
+                              .backgroundColor = COL_BASE,
+                          })
+    {
         /* Title */
         CLAY(CLAY_ID("Title"), {
-            .layout = {
-                .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(56) },
-                .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
-            },
-        }) {
+                                   .layout = {
+                                       .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(56) },
+                                       .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
+                                   },
+                               })
+        {
             CLAY_TEXT(CLAY_STRING("Button Gallery"), {
-                .textColor = COL_TEXT, .fontSize = 26,
-            });
+                                                         .textColor = COL_TEXT,
+                                                         .fontSize = 26,
+                                                     });
         }
 
         /* Panel */
         CLAY(CLAY_ID("Panel"), {
-            .layout = {
-                .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) },
-                .padding = { 24, 24, 24, 24 },
-                .childGap = 14,
-                .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            },
-            .backgroundColor = COL_SURFACE,
-            .cornerRadius = CLAY_CORNER_RADIUS(12),
-        }) {
+                                   .layout = {
+                                       .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) },
+                                       .padding = { 24, 24, 24, 24 },
+                                       .childGap = 14,
+                                       .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                                   },
+                                   .backgroundColor = COL_SURFACE,
+                                   .cornerRadius = CLAY_CORNER_RADIUS(12),
+                               })
+        {
             section_label("PRIMARY", 0);
             btn_row(BTN_PRI_SM, BTN_PRI_MD, BTN_PRI_LG, "Primary",
                     UI_BTN_PRIMARY, false);
@@ -170,9 +207,11 @@ static void ui_build(void) {
 
             /* Thin separator */
             CLAY(CLAY_ID("Sep"), {
-                .layout = { .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(1) } },
-                .backgroundColor = COL_OVERLAY,
-            }) {}
+                                     .layout = { .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(1) } },
+                                     .backgroundColor = COL_OVERLAY,
+                                 })
+            {
+            }
 
             section_label("DISABLED", 4);
             disabled_row();
@@ -180,8 +219,10 @@ static void ui_build(void) {
 
         /* Spacer */
         CLAY(CLAY_ID("Spacer"), {
-            .layout = { .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(16) } },
-        }) {}
+                                    .layout = { .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(16) } },
+                                })
+        {
+        }
 
         /* Click counter */
         counter_card();
@@ -189,8 +230,10 @@ static void ui_build(void) {
 }
 
 /* ---- Entry point ---- */
-int main(int argc, char *argv[]) {
-    (void)argc; (void)argv;
+int main(int argc, char *argv[])
+{
+    (void)argc;
+    (void)argv;
 
     ClayGPUCtx ctx;
     static const char *font_candidates[] = {
@@ -201,16 +244,19 @@ int main(int argc, char *argv[]) {
         NULL
     };
     const char *font = ClayGPUCtx_find_font(font_candidates);
-    if (!font) { SDL_Log("No usable font found"); return 1; }
+    if (!font) {
+        SDL_Log("No usable font found");
+        return 1;
+    }
     SDL_Log("Using font: %s", font);
     if (!ClayGPUCtx_init(&ctx, "Button Gallery", 640, 600, font, 16)) {
         SDL_Log("ClayGPUCtx_init failed");
         return 1;
     }
 
-    bool running       = true;
-    bool dirty         = true;
-    bool mouse_down    = false;
+    bool running = true;
+    bool dirty = true;
+    bool mouse_down = false;
     bool mouse_released = false;
     Uint64 last = SDL_GetPerformanceCounter();
 
@@ -220,31 +266,63 @@ int main(int argc, char *argv[]) {
 
         if (dirty) {
             while (SDL_PollEvent(&e)) {
-                if (e.type == SDL_EVENT_QUIT) { running = false; break; }
-                if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE) { running = false; break; }
-                if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN) mouse_down = true;
-                if (e.type == SDL_EVENT_MOUSE_BUTTON_UP)   { mouse_down = false; mouse_released = true; }
+                if (e.type == SDL_EVENT_QUIT) {
+                    running = false;
+                    break;
+                }
+                if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE) {
+                    running = false;
+                    break;
+                }
+                if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+                    mouse_down = true;
+                if (e.type == SDL_EVENT_MOUSE_BUTTON_UP) {
+                    mouse_down = false;
+                    mouse_released = true;
+                }
                 ClayGPUCtx_handle_event(&ctx, &e);
                 dirty = true;
             }
         } else {
-            if (!SDL_WaitEvent(&e)) break;
+            if (!SDL_WaitEvent(&e))
+                break;
             dirty = true;
-            if (e.type == SDL_EVENT_QUIT) { running = false; break; }
-            if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE) { running = false; break; }
-            if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN) mouse_down = true;
-            if (e.type == SDL_EVENT_MOUSE_BUTTON_UP)   { mouse_down = false; mouse_released = true; }
+            if (e.type == SDL_EVENT_QUIT) {
+                running = false;
+                break;
+            }
+            if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE) {
+                running = false;
+                break;
+            }
+            if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+                mouse_down = true;
+            if (e.type == SDL_EVENT_MOUSE_BUTTON_UP) {
+                mouse_down = false;
+                mouse_released = true;
+            }
             ClayGPUCtx_handle_event(&ctx, &e);
             while (SDL_PollEvent(&e)) {
-                if (e.type == SDL_EVENT_QUIT) { running = false; break; }
-                if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE) { running = false; break; }
-                if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN) mouse_down = true;
-                if (e.type == SDL_EVENT_MOUSE_BUTTON_UP)   { mouse_down = false; mouse_released = true; }
+                if (e.type == SDL_EVENT_QUIT) {
+                    running = false;
+                    break;
+                }
+                if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE) {
+                    running = false;
+                    break;
+                }
+                if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+                    mouse_down = true;
+                if (e.type == SDL_EVENT_MOUSE_BUTTON_UP) {
+                    mouse_down = false;
+                    mouse_released = true;
+                }
                 ClayGPUCtx_handle_event(&ctx, &e);
             }
         }
 
-        if (!running) break;
+        if (!running)
+            break;
 
         if (dirty) {
             /* Update counter string */

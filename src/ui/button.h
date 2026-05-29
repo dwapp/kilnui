@@ -9,22 +9,24 @@
 #ifndef UI_BUTTON_H
 #define UI_BUTTON_H
 
-#include <stdbool.h>
 #include "clay.h"
+#include <stdbool.h>
 
 /* ---- Variant ---- */
-typedef enum {
-    UI_BTN_PRIMARY   = 0,   /* filled accent colour */
-    UI_BTN_SECONDARY = 1,   /* subtle surface, accent text */
-    UI_BTN_GHOST     = 2,   /* fully transparent, muted text */
-    UI_BTN_DANGER    = 3,   /* red / destructive action */
+typedef enum
+{
+    UI_BTN_PRIMARY = 0,   /* filled accent colour */
+    UI_BTN_SECONDARY = 1, /* subtle surface, accent text */
+    UI_BTN_GHOST = 2,     /* fully transparent, muted text */
+    UI_BTN_DANGER = 3,    /* red / destructive action */
 } UIBtnVariant;
 
 /* ---- Size ---- */
-typedef enum {
-    UI_BTN_SM = 0,   /* 28px height */
-    UI_BTN_MD = 1,   /* 36px height (default) */
-    UI_BTN_LG = 2,   /* 48px height */
+typedef enum
+{
+    UI_BTN_SM = 0, /* 28px height */
+    UI_BTN_MD = 1, /* 36px height (default) */
+    UI_BTN_LG = 2, /* 48px height */
 } UIBtnSize;
 
 /* --- Per-frame mouse state ---- */

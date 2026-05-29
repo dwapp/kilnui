@@ -11,30 +11,33 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 /* ---- Cached glyph entry ---- */
-typedef struct {
-    uint64_t        key;          /* packed { codepoint | font_size << 32 } */
-    bool            occupied;
+typedef struct
+{
+    uint64_t key; /* packed { codepoint | font_size << 32 } */
+    bool occupied;
     SDL_GPUTexture *tex;
-    int             w, h;
-    int             bearing_x;    /* minx from TTF_GetGlyphMetrics */
-    int             bearing_y;    /* maxy (top bearing) */
-    int             advance;
+    int w, h;
+    int bearing_x; /* minx from TTF_GetGlyphMetrics */
+    int bearing_y; /* maxy (top bearing) */
+    int advance;
 } GlyphEntry;
 
 /* ---- Hash table ---- */
-typedef struct {
-    GlyphEntry    *slots;
-    uint32_t       capacity;
-    uint32_t       count;
-    SDL_GPUDevice *gpu;          /* needed for releasing textures on destroy */
+typedef struct
+{
+    GlyphEntry *slots;
+    uint32_t capacity;
+    uint32_t count;
+    SDL_GPUDevice *gpu; /* needed for releasing textures on destroy */
 } GlyphCache;
 
 /* Pack a codepoint + font_size into a single 64-bit key */
-static inline uint64_t GlyphCache_make_key(uint32_t codepoint, uint16_t font_size) {
+static inline uint64_t GlyphCache_make_key(uint32_t codepoint, uint16_t font_size)
+{
     return ((uint64_t)font_size << 32) | (uint64_t)codepoint;
 }
 
