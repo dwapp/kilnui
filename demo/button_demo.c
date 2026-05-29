@@ -6,27 +6,12 @@
  */
 
 #include "../src/clay_sdl3_gpu.h"
+#include "../src/clay_colors.h"
 #include "../src/ui/button.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <stdio.h>
 #include <string.h>
-
-/* ---- Palette ---- */
-#define COL_BASE \
-    (Clay_Color) { 30, 30, 46, 255 }
-#define COL_SURFACE \
-    (Clay_Color) { 49, 50, 68, 255 }
-#define COL_MANTLE \
-    (Clay_Color) { 24, 24, 37, 255 }
-#define COL_TEXT \
-    (Clay_Color) { 205, 214, 244, 255 }
-#define COL_SUBTEXT \
-    (Clay_Color) { 166, 173, 200, 255 }
-#define COL_OVERLAY \
-    (Clay_Color) { 88, 91, 112, 255 }
-#define COL_MAUVE \
-    (Clay_Color) { 203, 166, 247, 255 }
 
 /* ---- Button unique IDs ---- */
 enum
@@ -185,7 +170,7 @@ static void ui_build(void)
                                        .childGap = 14,
                                        .layoutDirection = CLAY_TOP_TO_BOTTOM,
                                    },
-                                   .backgroundColor = COL_SURFACE,
+                                   .backgroundColor = COL_SURFACE0,
                                    .cornerRadius = CLAY_CORNER_RADIUS(12),
                                })
         {

@@ -6,40 +6,11 @@
  */
 
 #include "../src/clay_sdl3_gpu.h"
+#include "../src/clay_colors.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <math.h>
 #include <stdio.h>
-
-/* ---- Color palette (Catppuccin Mocha inspired) ---- */
-#define COL_BASE \
-    (Clay_Color) { 30, 30, 46, 255 }
-#define COL_SURFACE0 \
-    (Clay_Color) { 49, 50, 68, 255 }
-#define COL_SURFACE1 \
-    (Clay_Color) { 69, 71, 90, 255 }
-#define COL_OVERLAY \
-    (Clay_Color) { 88, 91, 112, 255 }
-#define COL_TEXT \
-    (Clay_Color) { 205, 214, 244, 255 }
-#define COL_SUBTEXT \
-    (Clay_Color) { 166, 173, 200, 255 }
-#define COL_MAUVE \
-    (Clay_Color) { 203, 166, 247, 255 }
-#define COL_GREEN \
-    (Clay_Color) { 166, 227, 161, 255 }
-#define COL_PEACH \
-    (Clay_Color) { 250, 179, 135, 255 }
-#define COL_RED \
-    (Clay_Color) { 243, 139, 168, 255 }
-#define COL_BLUE \
-    (Clay_Color) { 137, 180, 250, 255 }
-#define COL_YELLOW \
-    (Clay_Color) { 249, 226, 175, 255 }
-#define COL_TEAL \
-    (Clay_Color) { 148, 226, 213, 255 }
-#define COL_LAVENDER \
-    (Clay_Color) { 180, 190, 254, 255 }
 
 static Clay_Color col_hover(Clay_Color base)
 {
