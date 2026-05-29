@@ -55,7 +55,7 @@ add_library(clay_sdl3_gpu STATIC
 )
 target_include_directories(clay_sdl3_gpu PUBLIC
     ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../clay
+    ${CMAKE_SOURCE_DIR}/3rdparty/clay
 )
 target_link_libraries(clay_sdl3_gpu PUBLIC
     SDL3::SDL3
@@ -72,7 +72,7 @@ add_library(ui_components STATIC
 )
 target_include_directories(ui_components PUBLIC
     ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/../clay
+    ${CMAKE_SOURCE_DIR}/3rdparty/clay
 )
 target_link_libraries(ui_components PUBLIC clay_sdl3_gpu)
 

@@ -134,6 +134,10 @@ static Clay_Dimensions measure_text_cb(Clay_StringSlice text,
     if (!ctx || !ctx->font || !text.chars || text.length <= 0)
         return (Clay_Dimensions){0, 0};
 
+    /* Apply the font size requested by Clay's text config */
+    int req_size = (config && config->fontSize > 0) ? config->fontSize : ctx->font_size;
+    TTF_SetFontSize(ctx->font, (float)req_size);
+
     int w = 0, h = 0;
     TTF_GetStringSize(ctx->font, text.chars, (size_t)text.length, &w, &h);
     if (config->letterSpacing && text.length > 1)
@@ -387,6 +391,10 @@ static void build_text_batch(ClayGPUCtx *ctx, TextBatch *tb,
     tb->quad_count = 0;
     if (!str || len <= 0) return;
 
+    /* Switch font to the size requested by this text element */
+    int req_size = (td->fontSize > 0) ? td->fontSize : ctx->font_size;
+    TTF_SetFontSize(ctx->font, (float)req_size);
+
     int font_ascent = TTF_GetFontAscent(ctx->font);
     float cx = bb.x * scale;
     float cy = bb.y * scale;
@@ -412,7 +420,9 @@ static void build_text_batch(ClayGPUCtx *ctx, TextBatch *tb,
         }
         prev_cp = cp;
 
-        const GlyphEntry *ge = GlyphCache_get(&ctx->glyph_cache, ctx->font, cp, (uint16_t)ctx->font_size);
+        /* Rasterize at the requested size (GlyphCache key includes font_size) */
+        const GlyphEntry *ge = GlyphCache_get(&ctx->glyph_cache, ctx->font,
+                                              cp, (uint16_t)req_size);
         if (!ge) { cx += 8 * scale; continue; }
 
         float gx = cx + ge->bearing_x * scale;

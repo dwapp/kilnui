@@ -6,7 +6,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <stdbool.h>
-#include "../../clay/clay.h"
+#include "clay.h"
 #include "glyph_cache.h"
 
 /* ---- Vertex formats ---- */

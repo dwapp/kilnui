@@ -10,7 +10,7 @@
 #define UI_BUTTON_H
 
 #include <stdbool.h>
-#include "../../clay/clay.h"
+#include "clay.h"
 
 /* ---- Variant ---- */
 typedef enum {

@@ -152,8 +152,11 @@ const GlyphEntry *GlyphCache_get(GlyphCache *gc, TTF_Font *font,
         return &gc->slots[idx];
     }
 
-    /* Cache miss — rasterize */
+    /* Cache miss — rasterize at the requested size */
     int minx = 0, maxx = 0, miny = 0, maxy = 0, advance = 0;
+    /* Ensure font is set to the correct size before measuring/rendering.
+     * TTF_SetFontSize is a no-op if the size hasn't changed, so it's cheap. */
+    TTF_SetFontSize(font, (float)font_size);
     if (!TTF_GetGlyphMetrics(font, codepoint, &minx, &maxx, &miny, &maxy, &advance)) {
         /* Glyph not in font; return NULL */
         return NULL;
@@ -184,6 +187,16 @@ const GlyphEntry *GlyphCache_get(GlyphCache *gc, TTF_Font *font,
         idx = probe(gc, key);
     }
 
+    /* bearing_y is the distance from the baseline to the TOP of the glyph
+     * in screen-down coordinates (positive = above baseline).
+     * TTF_GetGlyphMetrics returns maxy in font's Y-up space.
+     * When maxy == 0 (e.g. '.' in some fonts), the glyph top sits exactly
+     * at the baseline, making small glyphs fall below the text box top.
+     * Use max(maxy, tex_h) as a safe lower bound: if the rendered surface
+     * is taller than maxy, the font engine included extra leading/padding
+     * above the glyph and we must account for it. */
+    int bearing_y_px = (maxy > 0) ? maxy : tex_h;
+
     gc->slots[idx] = (GlyphEntry){
         .key       = key,
         .occupied  = true,
@@ -191,7 +204,7 @@ const GlyphEntry *GlyphCache_get(GlyphCache *gc, TTF_Font *font,
         .w         = tex_w,
         .h         = tex_h,
         .bearing_x = minx,
-        .bearing_y = maxy,
+        .bearing_y = bearing_y_px,
         .advance   = advance,
     };
     gc->count++;
