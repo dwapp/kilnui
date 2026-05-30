@@ -31,10 +31,16 @@ static SDL_GPUShader *load_spv(SDL_GPUDevice *dev, const char *path,
                                SDL_GPUShaderStage stage,
                                Uint32 num_ubo, Uint32 num_samplers)
 {
+    /* Resolve path relative to the executable directory so shaders are found
+     * regardless of the current working directory. */
+    char full_path[1024];
+    const char *base = SDL_GetBasePath();
+    SDL_snprintf(full_path, sizeof(full_path), "%s%s", base ? base : "", path);
+
     size_t sz   = 0;
-    void  *code = SDL_LoadFile(path, &sz);
+    void  *code = SDL_LoadFile(full_path, &sz);
     if (!code) {
-        SDL_Log("load_spv: %s: %s", path, SDL_GetError());
+        SDL_Log("load_spv: %s: %s", full_path, SDL_GetError());
         return NULL;
     }
     SDL_GPUShaderCreateInfo ci = {
