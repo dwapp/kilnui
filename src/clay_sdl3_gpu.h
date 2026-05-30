@@ -26,31 +26,43 @@ typedef struct
     float r, g, b, a;
 } VertexTex;
 
-/* ---- Ring buffer parameters ---- */
-#define RING_FRAMES   3
+/* ---- Capacity constants ---- */
 #define MAX_RECTS     8192
-#define MAX_TEX_QUADS 8192
+#define MAX_TEXT_CMDS 64    /* max TEXT render commands per frame */
 
 /* ---- Main context ---- */
 typedef struct
 {
-    SDL_Window *window;
+    SDL_Window    *window;
     SDL_GPUDevice *gpu;
-    SDL_GPUTexture *depth_tex;
-    TTF_Font *font;
-    float dpi_scale;
-    int font_size;
+    TTF_Font      *font;
+    float          dpi_scale;
+    int            font_size;
 
     GlyphCache glyph_cache;
 
     SDL_GPUGraphicsPipeline *pipeline_rect;
     SDL_GPUGraphicsPipeline *pipeline_text;
+    SDL_GPUSampler          *sampler_linear;
 
-    SDL_GPUSampler *sampler_linear;
+    /* Persistent GPU buffers — grown on demand, never shrunk mid-session.
+     * Reusing them avoids the per-frame Create/Release overhead. */
+    SDL_GPUBuffer          *rect_vbuf;
+    SDL_GPUBuffer          *rect_ibuf;
+    uint32_t                rect_vbuf_cap;   /* bytes currently allocated */
+    uint32_t                rect_ibuf_cap;
+
+    SDL_GPUBuffer          *text_vbuf;       /* all text quads packed together */
+    SDL_GPUBuffer          *text_ibuf;
+    uint32_t                text_vbuf_cap;
+    uint32_t                text_ibuf_cap;
+
+    SDL_GPUTransferBuffer  *staging_tbuf;    /* shared staging for vert+idx uploads */
+    uint32_t                staging_tbuf_cap;
 
     /* Clay memory */
-    void *clay_mem;
-    Clay_Context *clay_ctx;
+    void          *clay_mem;
+    Clay_Context  *clay_ctx;
 } ClayGPUCtx;
 
 /* ---- Public functions ---- */
@@ -63,13 +75,6 @@ void ClayGPUCtx_destroy(ClayGPUCtx *ctx);
 /* ---- Font discovery helper ----
  * Tries each path in `candidates` (NULL-terminated array) in order.
  * Returns the first path whose file exists, or NULL if none found.
- *
- * Example:
- *   const char *font = ClayGPUCtx_find_font((const char *[]){
- *       "assets/Inter-Regular.ttf",
- *       "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
- *       "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
- *       NULL });
  */
 const char *ClayGPUCtx_find_font(const char **candidates);
 

@@ -4,6 +4,11 @@
  * Value: { SDL_GPUTexture*, w, h, bearing_x, bearing_y, advance }
  *
  * Automatically resizes when load factor exceeds 0.75.
+ *
+ * Upload flow (avoids per-glyph command buffer submits):
+ *   GlyphCache_get()          — on miss: rasterizes + stages SDL_Surface in pending[]
+ *   GlyphCache_flush_uploads() — call once per frame BEFORE the render pass;
+ *                                uploads all pending surfaces in ONE copy pass.
  */
 
 #ifndef GLYPH_CACHE_H
@@ -26,13 +31,27 @@ typedef struct
     int advance;
 } GlyphEntry;
 
+/* ---- Pending glyph upload (surface staged, not yet on GPU) ---- */
+#define MAX_PENDING_GLYPH_UPLOADS 512
+
+typedef struct
+{
+    SDL_Surface    *surf; /* ABGR8888 surface ready to copy */
+    SDL_GPUTexture *tex;  /* destination texture (already created) */
+} PendingGlyphUpload;
+
 /* ---- Hash table ---- */
 typedef struct
 {
     GlyphEntry *slots;
-    uint32_t capacity;
-    uint32_t count;
+    uint32_t    capacity;
+    uint32_t    count;
     SDL_GPUDevice *gpu; /* needed for releasing textures on destroy */
+
+    /* Pending uploads — filled by GlyphCache_get on cache miss,
+     * drained by GlyphCache_flush_uploads() before the render pass. */
+    PendingGlyphUpload pending[MAX_PENDING_GLYPH_UPLOADS];
+    int                pending_count;
 } GlyphCache;
 
 /* Pack a codepoint + font_size into a single 64-bit key */
@@ -44,10 +63,17 @@ static inline uint64_t GlyphCache_make_key(uint32_t codepoint, uint16_t font_siz
 /* Initialize the cache with the given initial capacity (must be power of 2). */
 bool GlyphCache_init(GlyphCache *gc, uint32_t initial_cap, SDL_GPUDevice *gpu);
 
-/* Look up or rasterize a glyph.  On cache miss, rasterizes via TTF_RenderGlyph_Blended
- * and uploads to GPU texture.  Returns pointer to cached entry, or NULL on failure. */
+/* Look up or rasterize a glyph.
+ * On cache miss: rasterizes with TTF, creates the GPU texture, and STAGES the
+ * upload in gc->pending[].  The texture is not valid until after
+ * GlyphCache_flush_uploads() is called.
+ * Returns pointer to cached entry, or NULL on failure. */
 const GlyphEntry *GlyphCache_get(GlyphCache *gc, TTF_Font *font,
                                  uint32_t codepoint, uint16_t font_size);
+
+/* Upload all pending glyph surfaces to GPU in a single copy pass + submit.
+ * Call this ONCE per frame, after building geometry but BEFORE the render pass. */
+void GlyphCache_flush_uploads(GlyphCache *gc);
 
 /* Release all GPU textures and free the table. */
 void GlyphCache_destroy(GlyphCache *gc);

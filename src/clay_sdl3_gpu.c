@@ -342,113 +342,30 @@ static void push_rect(float x, float y, float w, float h,
     s_rect_count++;
 }
 
-/* ---- Batched GPU upload: copies ALL vertex/index data in ONE copy pass ---- *
- * Callers fill an upload_batch, then call upload_batch_commit() which:
- *   1. Maps a single transfer buffer
- *   2. Copies all regions into it
- *   3. Runs ONE copy pass in ONE command buffer
- *   4. Submits that command buffer once
- * This eliminates N separate AcquireGPUCommandBuffer/Submit calls per frame.
- */
-
-#define UPLOAD_MAX_REGIONS 128
-typedef struct
+/* ---- Persistent GPU buffer helpers ---- */
+/* Grows *buf to at least `needed` bytes; no-op if already large enough.
+ * SDL3 defers deletion, so no GPU idle wait is needed before release. */
+static void ensure_gpu_buffer(SDL_GPUDevice *gpu, SDL_GPUBuffer **buf, uint32_t *cap,
+                              uint32_t needed, SDL_GPUBufferUsageFlags usage)
 {
-    /* interleaved vertex+index layout in the transfer buffer:
-     * [vert0 | idx0 | vert1 | idx1 | ...] */
-    struct
-    {
-        Uint32 vert_offset, vert_size;
-        Uint32 idx_offset, idx_size;
-        SDL_GPUBuffer *vbuf, *ibuf;
-    } regions[UPLOAD_MAX_REGIONS];
-    int count;
-    Uint32 total_bytes;
-} UploadBatch;
-
-/* Simpler: just use a flat staging buffer, copy on add, commit once */
-#define STAGING_SIZE (8 * 1024 * 1024) /* 8 MB staging area */
-static Uint8 s_staging[STAGING_SIZE];
-static Uint32 s_staging_used;
-
-static void upload_batch_reset(void) { s_staging_used = 0; }
-
-static bool batch_add(UploadBatch *b, SDL_GPUDevice *gpu,
-                      const void *vdata, int vbytes,
-                      const void *idata, int ibytes,
-                      SDL_GPUBuffer **out_vbuf, SDL_GPUBuffer **out_ibuf)
-{
-    Uint32 needed = (Uint32)(vbytes + ibytes);
-    if (b->count >= UPLOAD_MAX_REGIONS)
-        return false;
-    if (s_staging_used + needed > STAGING_SIZE)
-        return false;
-
-    int i = b->count++;
-
-    *out_vbuf = SDL_CreateGPUBuffer(gpu, &(SDL_GPUBufferCreateInfo){
-                                             .usage = SDL_GPU_BUFFERUSAGE_VERTEX, .size = (Uint32)vbytes });
-    *out_ibuf = SDL_CreateGPUBuffer(gpu, &(SDL_GPUBufferCreateInfo){
-                                             .usage = SDL_GPU_BUFFERUSAGE_INDEX, .size = (Uint32)ibytes });
-
-    b->regions[i].vbuf = *out_vbuf;
-    b->regions[i].ibuf = *out_ibuf;
-    b->regions[i].vert_offset = s_staging_used;
-    b->regions[i].vert_size = (Uint32)vbytes;
-    SDL_memcpy(s_staging + s_staging_used, vdata, vbytes);
-    s_staging_used += (Uint32)vbytes;
-    b->regions[i].idx_offset = s_staging_used;
-    b->regions[i].idx_size = (Uint32)ibytes;
-    SDL_memcpy(s_staging + s_staging_used, idata, ibytes);
-    s_staging_used += (Uint32)ibytes;
-    b->total_bytes = s_staging_used;
-    return true;
+    if (*cap >= needed) return;
+    if (*buf) SDL_ReleaseGPUBuffer(gpu, *buf);
+    uint32_t nc = needed + needed / 2;  /* 1.5x over-alloc to amortise growth */
+    *buf = SDL_CreateGPUBuffer(gpu, &(SDL_GPUBufferCreateInfo){ .usage = usage, .size = nc });
+    if (!*buf) { SDL_Log("ensure_gpu_buffer: %s", SDL_GetError()); *cap = 0; return; }
+    *cap = nc;
 }
 
-/* Commit: ONE transfer buffer, ONE copy pass, ONE command buffer, ONE submit */
-static void batch_commit(UploadBatch *b, SDL_GPUDevice *gpu)
+static void ensure_transfer_buffer(SDL_GPUDevice *gpu, SDL_GPUTransferBuffer **tbuf,
+                                   uint32_t *cap, uint32_t needed)
 {
-    if (b->count == 0 || b->total_bytes == 0)
-        return;
-
-    SDL_GPUTransferBuffer *tbuf = SDL_CreateGPUTransferBuffer(gpu,
-                                                              &(SDL_GPUTransferBufferCreateInfo){
-                                                                  .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
-                                                                  .size = b->total_bytes,
-                                                              });
-    void *mapped = SDL_MapGPUTransferBuffer(gpu, tbuf, false);
-    SDL_memcpy(mapped, s_staging, b->total_bytes);
-    SDL_UnmapGPUTransferBuffer(gpu, tbuf);
-
-    SDL_GPUCommandBuffer *copy_cmd = SDL_AcquireGPUCommandBuffer(gpu);
-    SDL_GPUCopyPass *cp = SDL_BeginGPUCopyPass(copy_cmd);
-
-    for (int i = 0; i < b->count; i++) {
-        SDL_UploadToGPUBuffer(cp,
-                              &(SDL_GPUTransferBufferLocation){
-                                  .transfer_buffer = tbuf,
-                                  .offset = b->regions[i].vert_offset,
-                              },
-                              &(SDL_GPUBufferRegion){
-                                  .buffer = b->regions[i].vbuf,
-                                  .size = b->regions[i].vert_size,
-                              },
-                              false);
-        SDL_UploadToGPUBuffer(cp,
-                              &(SDL_GPUTransferBufferLocation){
-                                  .transfer_buffer = tbuf,
-                                  .offset = b->regions[i].idx_offset,
-                              },
-                              &(SDL_GPUBufferRegion){
-                                  .buffer = b->regions[i].ibuf,
-                                  .size = b->regions[i].idx_size,
-                              },
-                              false);
-    }
-
-    SDL_EndGPUCopyPass(cp);
-    SDL_SubmitGPUCommandBuffer(copy_cmd);
-    SDL_ReleaseGPUTransferBuffer(gpu, tbuf);
+    if (*cap >= needed) return;
+    if (*tbuf) SDL_ReleaseGPUTransferBuffer(gpu, *tbuf);
+    uint32_t nc = needed + needed / 2;
+    *tbuf = SDL_CreateGPUTransferBuffer(gpu,
+        &(SDL_GPUTransferBufferCreateInfo){ .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = nc });
+    if (!*tbuf) { SDL_Log("ensure_transfer_buffer: %s", SDL_GetError()); *cap = 0; return; }
+    *cap = nc;
 }
 
 /* ---- Pre-build text vertex data for one TEXT command ---- */
@@ -457,9 +374,11 @@ typedef struct
     VertexTex verts[256 * 4];
     Uint16 idx[256 * 6];
     int quad_count;
-    /* Per-quad glyph texture reference */
     SDL_GPUTexture *glyph_textures[256];
 } TextBatch;
+
+/* Static storage to avoid ~2 MB stack allocation in the render function */
+static TextBatch s_text_batches[MAX_TEXT_CMDS];
 
 static void build_text_batch(ClayGPUCtx *ctx, TextBatch *tb,
                              Clay_BoundingBox bb, Clay_TextRenderData *td, float scale)
@@ -548,15 +467,21 @@ void ClayGPUCtx_render(ClayGPUCtx *ctx, Clay_RenderCommandArray cmds)
     int pw, ph;
     SDL_GetWindowSizeInPixels(ctx->window, &pw, &ph);
     float scale = ctx->dpi_scale;
-    Mat4 proj = ortho_proj((float)pw, (float)ph);
+    Mat4 proj   = ortho_proj((float)pw, (float)ph);
 
-    /* ====== Phase 1: Collect geometry ====== */
+    /* ===== Phase 1: Collect geometry, map each cmd to its slot ===== */
+#define MAX_CMDS 2048
+    static int cmd_to_rect[MAX_CMDS]; /* rect slot index, -1 if not a RECT */
+    static int cmd_to_text[MAX_CMDS]; /* text batch index, -1 if not TEXT  */
 
-    /* Rectangles */
+    int n = cmds.length < MAX_CMDS ? cmds.length : MAX_CMDS;
+    for (int i = 0; i < n; i++) { cmd_to_rect[i] = -1; cmd_to_text[i] = -1; }
+
     s_rect_count = 0;
-    for (int i = 0; i < cmds.length; i++) {
+    for (int i = 0; i < n; i++) {
         Clay_RenderCommand *cmd = Clay_RenderCommandArray_Get(&cmds, i);
         if (cmd->commandType == CLAY_RENDER_COMMAND_TYPE_RECTANGLE) {
+            cmd_to_rect[i] = s_rect_count;
             Clay_BoundingBox bb = cmd->boundingBox;
             push_rect(bb.x, bb.y, bb.width, bb.height,
                       cmd->renderData.rectangle.backgroundColor,
@@ -564,119 +489,170 @@ void ClayGPUCtx_render(ClayGPUCtx *ctx, Clay_RenderCommandArray cmds)
         }
     }
 
-    /* Text batches — count how many TEXT commands exist */
-    int text_cmd_count = 0;
-    for (int i = 0; i < cmds.length; i++) {
-        Clay_RenderCommand *cmd = Clay_RenderCommandArray_Get(&cmds, i);
-        if (cmd->commandType == CLAY_RENDER_COMMAND_TYPE_TEXT)
-            text_cmd_count++;
-    }
-
-/* Build text batches (stack allocated, max 64 text commands per frame) */
-#define MAX_TEXT_CMDS 64
-    TextBatch text_batches[MAX_TEXT_CMDS];
-    int text_batch_indices[MAX_TEXT_CMDS]; /* which cmd index each batch corresponds to */
+    /* Per-batch vertex/index element offsets inside the combined text buffers */
+    static uint32_t text_vtx_off[MAX_TEXT_CMDS];
+    static uint32_t text_idx_off[MAX_TEXT_CMDS];
+    uint32_t text_vtx_total = 0, text_idx_total = 0;
     int tb_count = 0;
-    for (int i = 0; i < cmds.length && tb_count < MAX_TEXT_CMDS; i++) {
+    for (int i = 0; i < n && tb_count < MAX_TEXT_CMDS; i++) {
         Clay_RenderCommand *cmd = Clay_RenderCommandArray_Get(&cmds, i);
         if (cmd->commandType == CLAY_RENDER_COMMAND_TYPE_TEXT) {
-            build_text_batch(ctx, &text_batches[tb_count], cmd->boundingBox, &cmd->renderData.text, scale);
-            text_batch_indices[tb_count] = i;
+            cmd_to_text[i] = tb_count;
+            build_text_batch(ctx, &s_text_batches[tb_count],
+                             cmd->boundingBox, &cmd->renderData.text, scale);
+            text_vtx_off[tb_count] = text_vtx_total;
+            text_idx_off[tb_count] = text_idx_total;
+            text_vtx_total += (uint32_t)s_text_batches[tb_count].quad_count * 4;
+            text_idx_total += (uint32_t)s_text_batches[tb_count].quad_count * 6;
             tb_count++;
         }
     }
 
-    /* ====== Phase 2: Upload all GPU buffers — ONE copy pass, ONE submit ====== */
-    UploadBatch batch;
-    batch.count = 0;
-    batch.total_bytes = 0;
-    upload_batch_reset();
+    /* ===== Phase 2: Flush glyph uploads + upload all geometry ===== */
+    /* Batch all newly rasterized glyphs into ONE copy pass before render pass */
+    GlyphCache_flush_uploads(&ctx->glyph_cache);
 
-    SDL_GPUBuffer *rect_vbuf = NULL, *rect_ibuf = NULL;
-    if (s_rect_count > 0) {
-        batch_add(&batch, ctx->gpu,
-                  s_rect_verts, s_rect_count * 4 * (int)sizeof(VertexRect),
-                  s_rect_idx, s_rect_count * 6 * (int)sizeof(Uint16),
-                  &rect_vbuf, &rect_ibuf);
-    }
+    uint32_t rv_sz = (uint32_t)s_rect_count * 4 * sizeof(VertexRect);
+    uint32_t ri_sz = (uint32_t)s_rect_count * 6 * sizeof(Uint16);
+    uint32_t tv_sz = text_vtx_total * sizeof(VertexTex);
+    uint32_t ti_sz = text_idx_total * sizeof(Uint16);
+    uint32_t total = rv_sz + ri_sz + tv_sz + ti_sz;
 
-    /* Upload text buffers */
-    SDL_GPUBuffer *text_vbufs[MAX_TEXT_CMDS];
-    SDL_GPUBuffer *text_ibufs[MAX_TEXT_CMDS];
-    for (int t = 0; t < tb_count; t++) {
-        TextBatch *tb = &text_batches[t];
-        if (tb->quad_count > 0) {
-            batch_add(&batch, ctx->gpu,
-                      tb->verts, tb->quad_count * 4 * (int)sizeof(VertexTex),
-                      tb->idx, tb->quad_count * 6 * (int)sizeof(Uint16),
-                      &text_vbufs[t], &text_ibufs[t]);
-        } else {
-            text_vbufs[t] = NULL;
-            text_ibufs[t] = NULL;
+    if (total > 0) {
+        /* Grow persistent GPU buffers as needed — never shrink */
+        ensure_gpu_buffer(ctx->gpu, &ctx->rect_vbuf, &ctx->rect_vbuf_cap,
+                          rv_sz ? rv_sz : 4, SDL_GPU_BUFFERUSAGE_VERTEX);
+        ensure_gpu_buffer(ctx->gpu, &ctx->rect_ibuf, &ctx->rect_ibuf_cap,
+                          ri_sz ? ri_sz : 4, SDL_GPU_BUFFERUSAGE_INDEX);
+        ensure_gpu_buffer(ctx->gpu, &ctx->text_vbuf, &ctx->text_vbuf_cap,
+                          tv_sz ? tv_sz : 4, SDL_GPU_BUFFERUSAGE_VERTEX);
+        ensure_gpu_buffer(ctx->gpu, &ctx->text_ibuf, &ctx->text_ibuf_cap,
+                          ti_sz ? ti_sz : 4, SDL_GPU_BUFFERUSAGE_INDEX);
+        ensure_transfer_buffer(ctx->gpu, &ctx->staging_tbuf,
+                               &ctx->staging_tbuf_cap, total);
+
+        /* Pack layout: [rect_verts | rect_idx | text_verts | text_idx] */
+        uint8_t *m   = SDL_MapGPUTransferBuffer(ctx->gpu, ctx->staging_tbuf, true);
+        uint32_t off = 0;
+        uint32_t off_rv = off;
+        if (rv_sz) { SDL_memcpy(m + off, s_rect_verts, rv_sz); off += rv_sz; }
+        uint32_t off_ri = off;
+        if (ri_sz) { SDL_memcpy(m + off, s_rect_idx,   ri_sz); off += ri_sz; }
+        uint32_t off_tv = off;
+        for (int t = 0; t < tb_count; t++) {
+            int qc = s_text_batches[t].quad_count;
+            if (qc > 0) {
+                SDL_memcpy(m + off, s_text_batches[t].verts,
+                           (size_t)qc * 4 * sizeof(VertexTex));
+                off += (uint32_t)qc * 4 * sizeof(VertexTex);
+            }
         }
+        uint32_t off_ti = off;
+        for (int t = 0; t < tb_count; t++) {
+            int qc = s_text_batches[t].quad_count;
+            if (qc > 0) {
+                SDL_memcpy(m + off, s_text_batches[t].idx,
+                           (size_t)qc * 6 * sizeof(Uint16));
+                off += (uint32_t)qc * 6 * sizeof(Uint16);
+            }
+        }
+        SDL_UnmapGPUTransferBuffer(ctx->gpu, ctx->staging_tbuf);
+
+        /* ONE copy pass, ONE submit for all geometry */
+        SDL_GPUCommandBuffer *cc = SDL_AcquireGPUCommandBuffer(ctx->gpu);
+        SDL_GPUCopyPass    *cp   = SDL_BeginGPUCopyPass(cc);
+        if (rv_sz) SDL_UploadToGPUBuffer(cp,
+            &(SDL_GPUTransferBufferLocation){ .transfer_buffer = ctx->staging_tbuf, .offset = off_rv },
+            &(SDL_GPUBufferRegion){ .buffer = ctx->rect_vbuf, .size = rv_sz }, true);
+        if (ri_sz) SDL_UploadToGPUBuffer(cp,
+            &(SDL_GPUTransferBufferLocation){ .transfer_buffer = ctx->staging_tbuf, .offset = off_ri },
+            &(SDL_GPUBufferRegion){ .buffer = ctx->rect_ibuf, .size = ri_sz }, true);
+        if (tv_sz) SDL_UploadToGPUBuffer(cp,
+            &(SDL_GPUTransferBufferLocation){ .transfer_buffer = ctx->staging_tbuf, .offset = off_tv },
+            &(SDL_GPUBufferRegion){ .buffer = ctx->text_vbuf, .size = tv_sz }, true);
+        if (ti_sz) SDL_UploadToGPUBuffer(cp,
+            &(SDL_GPUTransferBufferLocation){ .transfer_buffer = ctx->staging_tbuf, .offset = off_ti },
+            &(SDL_GPUBufferRegion){ .buffer = ctx->text_ibuf, .size = ti_sz }, true);
+        SDL_EndGPUCopyPass(cp);
+        SDL_SubmitGPUCommandBuffer(cc);
     }
 
-    /* Single commit: one transfer buffer, one copy pass, one command buffer */
-    batch_commit(&batch, ctx->gpu);
-
-    /* ====== Phase 3: Render pass ====== */
-
+    /* ===== Phase 3: Render pass — iterate Clay commands IN ORDER ===== */
     SDL_GPUCommandBuffer *cmdbuf = SDL_AcquireGPUCommandBuffer(ctx->gpu);
-    if (!cmdbuf)
-        return;
+    if (!cmdbuf) return;
 
     SDL_GPUTexture *swapchain = NULL;
     SDL_WaitAndAcquireGPUSwapchainTexture(cmdbuf, ctx->window, &swapchain, NULL, NULL);
-    if (!swapchain) {
-        SDL_SubmitGPUCommandBuffer(cmdbuf);
-        return;
-    }
+    if (!swapchain) { SDL_SubmitGPUCommandBuffer(cmdbuf); return; }
 
     SDL_GPUColorTargetInfo ct = {
-        .texture = swapchain,
+        .texture     = swapchain,
         .clear_color = { 0.08f, 0.08f, 0.12f, 1.0f },
-        .load_op = SDL_GPU_LOADOP_CLEAR,
-        .store_op = SDL_GPU_STOREOP_STORE,
+        .load_op     = SDL_GPU_LOADOP_CLEAR,
+        .store_op    = SDL_GPU_STOREOP_STORE,
     };
     SDL_GPURenderPass *rp = SDL_BeginGPURenderPass(cmdbuf, &ct, 1, NULL);
 
-    /* Draw rectangles */
-    if (s_rect_count > 0 && rect_vbuf && rect_ibuf) {
-        SDL_BindGPUGraphicsPipeline(rp, ctx->pipeline_rect);
-        SDL_PushGPUVertexUniformData(cmdbuf, 0, &proj, sizeof(proj));
-        SDL_BindGPUVertexBuffers(rp, 0, &(SDL_GPUBufferBinding){ .buffer = rect_vbuf }, 1);
-        SDL_BindGPUIndexBuffer(rp, &(SDL_GPUBufferBinding){ .buffer = rect_ibuf }, SDL_GPU_INDEXELEMENTSIZE_16BIT);
-        SDL_DrawGPUIndexedPrimitives(rp, (Uint32)(s_rect_count * 6), 1, 0, 0, 0);
-    }
+    /* Render in Clay's command order to honour Z-layering.
+     * We switch the active pipeline only when the command type changes.
+     * SDL_GPU's vertex_offset parameter rebases per-batch text indices. */
+    SDL_GPUGraphicsPipeline *active_pipe = NULL;
 
-    /* Draw text and handle scissor — iterate commands in order */
-    SDL_BindGPUGraphicsPipeline(rp, ctx->pipeline_text);
-    SDL_PushGPUVertexUniformData(cmdbuf, 0, &proj, sizeof(proj));
-    int tb_idx = 0;
-
-    for (int i = 0; i < cmds.length; i++) {
+    for (int i = 0; i < n; i++) {
         Clay_RenderCommand *cmd = Clay_RenderCommandArray_Get(&cmds, i);
         switch (cmd->commandType) {
-        case CLAY_RENDER_COMMAND_TYPE_TEXT:
-            if (tb_idx < tb_count && text_batch_indices[tb_idx] == i) {
-                TextBatch *tb = &text_batches[tb_idx];
-                if (tb->quad_count > 0 && text_vbufs[tb_idx]) {
-                    SDL_BindGPUVertexBuffers(rp, 0, &(SDL_GPUBufferBinding){ .buffer = text_vbufs[tb_idx] }, 1);
-                    SDL_BindGPUIndexBuffer(rp, &(SDL_GPUBufferBinding){ .buffer = text_ibufs[tb_idx] }, SDL_GPU_INDEXELEMENTSIZE_16BIT);
-                    /* Draw glyph by glyph (each has its own texture) */
-                    for (int q = 0; q < tb->quad_count; q++) {
-                        SDL_BindGPUFragmentSamplers(rp, 0,
-                                                    &(SDL_GPUTextureSamplerBinding){ .texture = tb->glyph_textures[q], .sampler = ctx->sampler_linear }, 1);
-                        SDL_DrawGPUIndexedPrimitives(rp, 6, 1, (Uint32)(q * 6), 0, 0);
-                    }
-                }
-                tb_idx++;
+
+        case CLAY_RENDER_COMMAND_TYPE_RECTANGLE: {
+            int ri = cmd_to_rect[i];
+            if (ri < 0 || !ctx->rect_vbuf) break;
+            if (active_pipe != ctx->pipeline_rect) {
+                SDL_BindGPUGraphicsPipeline(rp, ctx->pipeline_rect);
+                SDL_PushGPUVertexUniformData(cmdbuf, 0, &proj, sizeof(proj));
+                SDL_BindGPUVertexBuffers(rp, 0,
+                    &(SDL_GPUBufferBinding){ .buffer = ctx->rect_vbuf }, 1);
+                SDL_BindGPUIndexBuffer(rp,
+                    &(SDL_GPUBufferBinding){ .buffer = ctx->rect_ibuf },
+                    SDL_GPU_INDEXELEMENTSIZE_16BIT);
+                active_pipe = ctx->pipeline_rect;
+            }
+            SDL_DrawGPUIndexedPrimitives(rp, 6, 1, (Uint32)(ri * 6), 0, 0);
+            break;
+        }
+
+        case CLAY_RENDER_COMMAND_TYPE_TEXT: {
+            int ti = cmd_to_text[i];
+            if (ti < 0 || !ctx->text_vbuf) break;
+            TextBatch *tb = &s_text_batches[ti];
+            if (tb->quad_count == 0) break;
+            if (active_pipe != ctx->pipeline_text) {
+                SDL_BindGPUGraphicsPipeline(rp, ctx->pipeline_text);
+                SDL_PushGPUVertexUniformData(cmdbuf, 0, &proj, sizeof(proj));
+                SDL_BindGPUVertexBuffers(rp, 0,
+                    &(SDL_GPUBufferBinding){ .buffer = ctx->text_vbuf }, 1);
+                SDL_BindGPUIndexBuffer(rp,
+                    &(SDL_GPUBufferBinding){ .buffer = ctx->text_ibuf },
+                    SDL_GPU_INDEXELEMENTSIZE_16BIT);
+                active_pipe = ctx->pipeline_text;
+            }
+            /* vertex_offset shifts the per-batch (0-based) indices into the
+             * combined text VBO — no index rebasing needed in CPU code.    */
+            Uint32  idx_base = text_idx_off[ti];
+            Sint32  vtx_base = (Sint32)text_vtx_off[ti];
+            for (int q = 0; q < tb->quad_count; q++) {
+                SDL_BindGPUFragmentSamplers(rp, 0,
+                    &(SDL_GPUTextureSamplerBinding){
+                        .texture = tb->glyph_textures[q],
+                        .sampler = ctx->sampler_linear }, 1);
+                SDL_DrawGPUIndexedPrimitives(rp, 6, 1,
+                    idx_base + (Uint32)(q * 6), vtx_base, 0);
             }
             break;
-        case CLAY_RENDER_COMMAND_TYPE_SCISSOR_START:
-        {
+        }
+
+        case CLAY_RENDER_COMMAND_TYPE_SCISSOR_START: {
             Clay_BoundingBox sb = cmd->boundingBox;
-            SDL_Rect sc = { (int)(sb.x * scale), (int)(sb.y * scale), (int)(sb.width * scale), (int)(sb.height * scale) };
+            SDL_Rect sc = { (int)(sb.x * scale), (int)(sb.y * scale),
+                            (int)(sb.width * scale), (int)(sb.height * scale) };
             SDL_SetGPUScissor(rp, &sc);
             break;
         }
@@ -690,40 +666,27 @@ void ClayGPUCtx_render(ClayGPUCtx *ctx, Clay_RenderCommandArray cmds)
 
     SDL_EndGPURenderPass(rp);
     SDL_SubmitGPUCommandBuffer(cmdbuf);
-
-    /* ====== Phase 4: Release GPU buffers ====== */
-    if (rect_vbuf)
-        SDL_ReleaseGPUBuffer(ctx->gpu, rect_vbuf);
-    if (rect_ibuf)
-        SDL_ReleaseGPUBuffer(ctx->gpu, rect_ibuf);
-    for (int t = 0; t < tb_count; t++) {
-        if (text_vbufs[t])
-            SDL_ReleaseGPUBuffer(ctx->gpu, text_vbufs[t]);
-        if (text_ibufs[t])
-            SDL_ReleaseGPUBuffer(ctx->gpu, text_ibufs[t]);
-    }
 }
 
 /* ---- Destroy ---- */
 void ClayGPUCtx_destroy(ClayGPUCtx *ctx)
 {
     GlyphCache_destroy(&ctx->glyph_cache);
-    if (ctx->pipeline_rect)
-        SDL_ReleaseGPUGraphicsPipeline(ctx->gpu, ctx->pipeline_rect);
-    if (ctx->pipeline_text)
-        SDL_ReleaseGPUGraphicsPipeline(ctx->gpu, ctx->pipeline_text);
-    if (ctx->sampler_linear)
-        SDL_ReleaseGPUSampler(ctx->gpu, ctx->sampler_linear);
-    if (ctx->font)
-        TTF_CloseFont(ctx->font);
+    /* Persistent geometry buffers */
+    if (ctx->rect_vbuf)    SDL_ReleaseGPUBuffer(ctx->gpu, ctx->rect_vbuf);
+    if (ctx->rect_ibuf)    SDL_ReleaseGPUBuffer(ctx->gpu, ctx->rect_ibuf);
+    if (ctx->text_vbuf)    SDL_ReleaseGPUBuffer(ctx->gpu, ctx->text_vbuf);
+    if (ctx->text_ibuf)    SDL_ReleaseGPUBuffer(ctx->gpu, ctx->text_ibuf);
+    if (ctx->staging_tbuf) SDL_ReleaseGPUTransferBuffer(ctx->gpu, ctx->staging_tbuf);
+    if (ctx->pipeline_rect)  SDL_ReleaseGPUGraphicsPipeline(ctx->gpu, ctx->pipeline_rect);
+    if (ctx->pipeline_text)  SDL_ReleaseGPUGraphicsPipeline(ctx->gpu, ctx->pipeline_text);
+    if (ctx->sampler_linear) SDL_ReleaseGPUSampler(ctx->gpu, ctx->sampler_linear);
+    if (ctx->font)           TTF_CloseFont(ctx->font);
     TTF_Quit();
     if (ctx->gpu && ctx->window)
         SDL_ReleaseWindowFromGPUDevice(ctx->gpu, ctx->window);
-    if (ctx->gpu)
-        SDL_DestroyGPUDevice(ctx->gpu);
-    if (ctx->window)
-        SDL_DestroyWindow(ctx->window);
-    if (ctx->clay_mem)
-        SDL_free(ctx->clay_mem);
+    if (ctx->gpu)      SDL_DestroyGPUDevice(ctx->gpu);
+    if (ctx->window)   SDL_DestroyWindow(ctx->window);
+    if (ctx->clay_mem) SDL_free(ctx->clay_mem);
     SDL_Quit();
 }
