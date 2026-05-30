@@ -89,8 +89,10 @@ const GlyphEntry *GlyphCache_get(GlyphCache *gc, TTF_Font *font,
     if (gc->slots[idx].occupied)
         return &gc->slots[idx];
 
-    /* Cache miss — rasterize at the requested size */
-    TTF_SetFontSize(font, (float)font_size);
+    /* Cache miss — rasterize at the requested size.
+     * The caller MUST have already called TTF_SetFontSize(font, font_size)
+     * before calling GlyphCache_get, so we skip the redundant call here.
+     * This avoids stomping on the caller's cached font-size state. */
     int minx = 0, maxx = 0, miny = 0, maxy = 0, advance = 0;
     if (!TTF_GetGlyphMetrics(font, codepoint, &minx, &maxx, &miny, &maxy, &advance))
         return NULL;

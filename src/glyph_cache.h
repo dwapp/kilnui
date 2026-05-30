@@ -67,7 +67,11 @@ bool GlyphCache_init(GlyphCache *gc, uint32_t initial_cap, SDL_GPUDevice *gpu);
  * On cache miss: rasterizes with TTF, creates the GPU texture, and STAGES the
  * upload in gc->pending[].  The texture is not valid until after
  * GlyphCache_flush_uploads() is called.
- * Returns pointer to cached entry, or NULL on failure. */
+ * Returns pointer to cached entry, or NULL on failure.
+ *
+ * IMPORTANT: The caller MUST call TTF_SetFontSize(font, font_size) before
+ * calling this function. GlyphCache_get does NOT set the font size itself
+ * to avoid interfering with the caller's cached font-size state. */
 const GlyphEntry *GlyphCache_get(GlyphCache *gc, TTF_Font *font,
                                  uint32_t codepoint, uint16_t font_size);
 

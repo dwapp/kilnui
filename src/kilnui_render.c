@@ -39,7 +39,7 @@ static void ensure_gpu_buffer(SDL_GPUDevice *gpu, SDL_GPUBuffer **buf, uint32_t 
     if (*buf) SDL_ReleaseGPUBuffer(gpu, *buf);
     uint32_t nc = needed + needed / 2;   /* 1.5x over-alloc to amortise growth */
     *buf = SDL_CreateGPUBuffer(gpu, &(SDL_GPUBufferCreateInfo){ .usage = usage, .size = nc });
-    if (!*buf) { SDL_Log("ensure_gpu_buffer: %s", SDL_GetError()); *cap = 0; return; }
+    if (!*buf) { SDL_Log("ensure_gpu_buffer: %s", SDL_GetError()); *buf = NULL; *cap = 0; return; }
     *cap = nc;
 }
 
@@ -51,7 +51,7 @@ static void ensure_transfer_buffer(SDL_GPUDevice *gpu, SDL_GPUTransferBuffer **t
     uint32_t nc = needed + needed / 2;
     *tbuf = SDL_CreateGPUTransferBuffer(gpu,
         &(SDL_GPUTransferBufferCreateInfo){ .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = nc });
-    if (!*tbuf) { SDL_Log("ensure_transfer_buffer: %s", SDL_GetError()); *cap = 0; return; }
+    if (!*tbuf) { SDL_Log("ensure_transfer_buffer: %s", SDL_GetError()); *tbuf = NULL; *cap = 0; return; }
     *cap = nc;
 }
 

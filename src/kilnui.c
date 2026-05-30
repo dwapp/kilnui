@@ -33,16 +33,22 @@ static SDL_GPUShader *load_spv(SDL_GPUDevice *dev, const char *path,
 {
     /* Resolve path relative to the executable directory so shaders are found
      * regardless of the current working directory. */
-    char full_path[1024];
     const char *base = SDL_GetBasePath();
-    SDL_snprintf(full_path, sizeof(full_path), "%s%s", base ? base : "", path);
+    char *full_path = NULL;
+    SDL_asprintf(&full_path, "%s%s", base ? base : "", path);
+    if (!full_path) {
+        SDL_Log("load_spv: path allocation failed");
+        return NULL;
+    }
 
     size_t sz   = 0;
     void  *code = SDL_LoadFile(full_path, &sz);
     if (!code) {
         SDL_Log("load_spv: %s: %s", full_path, SDL_GetError());
+        SDL_free(full_path);
         return NULL;
     }
+    SDL_free(full_path);
     SDL_GPUShaderCreateInfo ci = {
         .code               = code,
         .code_size          = sz,
