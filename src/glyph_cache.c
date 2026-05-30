@@ -78,6 +78,11 @@ bool GlyphCache_init(GlyphCache *gc, uint32_t initial_cap, SDL_GPUDevice *gpu)
 const GlyphEntry *GlyphCache_get(GlyphCache *gc, TTF_Font *font,
                                  uint32_t codepoint, uint16_t font_size)
 {
+    /* U+0000 and C0 controls have no renderable glyph; bail out early
+     * to avoid TTF_RenderGlyph_Blended failing with "Text has zero width". */
+    if (codepoint == 0 || codepoint < 0x20)
+        return NULL;
+
     uint64_t key = GlyphCache_make_key(codepoint, font_size);
     uint32_t idx = probe(gc, key);
 

@@ -121,11 +121,36 @@ static void build_text_batch(KilnUI *ctx, TextBatch *tb,
     for (int i = 0; i < len && tb->quad_count < 256;) {
         uint32_t cp;
         uint8_t  c = (uint8_t)str[i];
-        if      (c < 0x80) { cp = c;                                                                          i += 1; }
-        else if (c < 0xE0) { cp = (c & 0x1F) <<  6 | (str[i+1] & 0x3F);                                      i += 2; }
-        else if (c < 0xF0) { cp = (c & 0x0F) << 12 | (str[i+1] & 0x3F) <<  6 | (str[i+2] & 0x3F);          i += 3; }
-        else               { cp = (c & 0x07) << 18 | (str[i+1] & 0x3F) << 12 | (str[i+2] & 0x3F) << 6
-                                                    | (str[i+3] & 0x3F);                                       i += 4; }
+
+        /* Decode one UTF-8 code point with explicit bounds checking.
+         * Clay_StringSlice is NOT null-terminated, so reading past `len`
+         * yields garbage bytes (often \0) which would produce U+0000. */
+        if (c < 0x80) {
+            cp = c;
+            i += 1;
+        } else if (c < 0xE0) {
+            if (i + 1 >= len) break;                          /* truncated 2-byte seq */
+            cp = (uint32_t)(c & 0x1F) << 6
+               | (uint32_t)((uint8_t)str[i+1] & 0x3F);
+            i += 2;
+        } else if (c < 0xF0) {
+            if (i + 2 >= len) break;                          /* truncated 3-byte seq */
+            cp = (uint32_t)(c & 0x0F) << 12
+               | (uint32_t)((uint8_t)str[i+1] & 0x3F) << 6
+               | (uint32_t)((uint8_t)str[i+2] & 0x3F);
+            i += 3;
+        } else {
+            if (i + 3 >= len) break;                          /* truncated 4-byte seq */
+            cp = (uint32_t)(c & 0x07) << 18
+               | (uint32_t)((uint8_t)str[i+1] & 0x3F) << 12
+               | (uint32_t)((uint8_t)str[i+2] & 0x3F) <<  6
+               | (uint32_t)((uint8_t)str[i+3] & 0x3F);
+            i += 4;
+        }
+
+        /* Skip null bytes and non-printable control characters.
+         * U+0000 is the most common source of "Text has zero width" errors. */
+        if (cp == 0 || cp < 0x20) continue;
 
         if (prev_cp) {
             int kern = 0;
