@@ -42,7 +42,7 @@ static void ui_sidebar(void)
                                   },
                               })
         {
-            CLAY_TEXT(CLAY_STRING("Clay GPU Demo"), {
+            CLAY_TEXT(CLAY_STRING("Kiln UI"), {
                                                         .textColor = COL_MAUVE,
                                                         .fontSize = 18,
                                                     });
@@ -323,7 +323,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     SDL_Log("Using font: %s", font);
-    if (!ClayGPUCtx_init(&ctx, "Clay GPU Demo", 1280, 720, font, 16)) {
+    if (!ClayGPUCtx_init(&ctx, "Kiln UI", 1280, 720, font, 16)) {
         SDL_Log("Failed to initialize ClayGPUCtx");
         return 1;
     }
