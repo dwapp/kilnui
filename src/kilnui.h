@@ -40,7 +40,8 @@ typedef struct
     SDL_Window    *window;
     SDL_GPUDevice *gpu;
     TTF_Font      *font;
-    float          dpi_scale;
+    float          dpi_scale;   /* physical_px / logical_px (render scale) */
+    float          mouse_scale; /* SDL logical mouse coords → Clay layout coords */
     int            font_size;
 
     GlyphCache glyph_cache;

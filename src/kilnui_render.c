@@ -106,10 +106,15 @@ static void build_text_batch(KilnUI *ctx, TextBatch *tb,
     if (!str || len <= 0) return;
 
     int req_size = (td->fontSize > 0) ? td->fontSize : ctx->font_size;
-    TTF_SetFontSize(ctx->font, (float)req_size);
 
-    int   font_ascent = TTF_GetFontAscent(ctx->font);
-    float cx = bb.x * scale;
+    /* Rasterize glyphs at PHYSICAL pixel size for crisp HiDPI rendering.
+     * Glyph metrics (w, h, bearing, advance) are then already in physical px. */
+    int phys_size = (int)((float)req_size * scale + 0.5f);
+    if (phys_size < 1) phys_size = 1;
+    TTF_SetFontSize(ctx->font, (float)phys_size);
+
+    int   font_ascent = TTF_GetFontAscent(ctx->font); /* physical px */
+    float cx = bb.x * scale;                          /* logical → physical */
     float cy = bb.y * scale;
 
     float nr = (td->textColor.r / 255.f) * (td->textColor.a / 255.f);
@@ -155,18 +160,18 @@ static void build_text_batch(KilnUI *ctx, TextBatch *tb,
         if (prev_cp) {
             int kern = 0;
             TTF_GetGlyphKerning(ctx->font, prev_cp, cp, &kern);
-            cx += kern * scale;
+            cx += kern; /* kern from physical-size font, already in physical px */
         }
         prev_cp = cp;
 
         const GlyphEntry *ge = GlyphCache_get(&ctx->glyph_cache, ctx->font,
-                                              cp, (uint16_t)req_size);
-        if (!ge) { cx += 8 * scale; continue; }
+                                              cp, (uint16_t)phys_size);
+        if (!ge) { cx += phys_size * 0.5f; continue; } /* fallback advance */
 
-        float gx = cx + ge->bearing_x * scale;
-        float gy = cy + (font_ascent - ge->bearing_y) * scale;
-        float gw = ge->w * scale;
-        float gh = ge->h * scale;
+        float gx = cx + ge->bearing_x; /* bearing already in physical px */
+        float gy = cy + (font_ascent - ge->bearing_y);
+        float gw = ge->w;              /* glyph size already in physical px */
+        float gh = ge->h;
 
         int q  = tb->quad_count;
         int vi = q * 4, ii = q * 6;
@@ -178,8 +183,8 @@ static void build_text_batch(KilnUI *ctx, TextBatch *tb,
         tb->idx[ii+3]=vi; tb->idx[ii+4]=vi+2; tb->idx[ii+5]=vi+3;
         tb->glyph_textures[q] = ge->tex;
 
-        cx += ge->advance * scale;
-        if (td->letterSpacing) cx += td->letterSpacing * scale;
+        cx += ge->advance; /* advance in physical px, no scale */
+        if (td->letterSpacing) cx += td->letterSpacing * scale; /* logical px → physical */
         tb->quad_count++;
     }
 }

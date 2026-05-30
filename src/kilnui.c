@@ -212,13 +212,22 @@ bool KilnUI_init(KilnUI *ctx, const char *title,
         return false;
     }
 
-    /* dpi_scale = true physical/logical ratio (not SDL_GetWindowDisplayScale,
-     * which gives the content scale and can differ from the pixel ratio). */
+    /* dpi_scale = max(pixel_ratio, display_scale).
+     * pixel_ratio covers Wayland HiDPI (e.g. 2.0 on a 4K display).
+     * display_scale covers X11 where pixel_ratio == 1.0 but the OS
+     * reports a fractional content scale (e.g. 1.5 at 150% in KDE/GNOME). */
     {
         int pw, ph, lw, lh;
         SDL_GetWindowSizeInPixels(ctx->window, &pw, &ph);
         SDL_GetWindowSize(ctx->window, &lw, &lh);
-        ctx->dpi_scale = (lw > 0) ? (float)pw / (float)lw : 1.0f;
+        float pixel_ratio   = (lw > 0) ? (float)pw / (float)lw : 1.0f;
+        float display_scale = SDL_GetWindowDisplayScale(ctx->window);
+        if (display_scale < 1.0f) display_scale = 1.0f;
+        ctx->dpi_scale   = (pixel_ratio >= display_scale) ? pixel_ratio : display_scale;
+        /* SDL mouse events are in logical px (range 0..lw).
+         * Clay layout is in range 0..(pw/dpi_scale).
+         * mouse_scale converts between the two. */
+        ctx->mouse_scale = (lw > 0) ? (float)pw / ((float)lw * ctx->dpi_scale) : 1.0f;
     }
 
     ctx->font = TTF_OpenFont(font_path, (float)font_size);
@@ -247,10 +256,16 @@ bool KilnUI_init(KilnUI *ctx, const char *title,
 
     uint32_t mem_size = Clay_MinMemorySize();
     ctx->clay_mem = SDL_malloc(mem_size);
-    Clay_Arena arena = Clay_CreateArenaWithCapacityAndMemory(mem_size, ctx->clay_mem);
-    ctx->clay_ctx = Clay_Initialize(arena,
-                                    (Clay_Dimensions){ (float)w, (float)h },
-                                    (Clay_ErrorHandler){ clay_error_cb, NULL });
+    {
+        int pw, ph;
+        SDL_GetWindowSizeInPixels(ctx->window, &pw, &ph);
+        float clay_w = (float)pw / ctx->dpi_scale;
+        float clay_h = (float)ph / ctx->dpi_scale;
+        Clay_Arena arena = Clay_CreateArenaWithCapacityAndMemory(mem_size, ctx->clay_mem);
+        ctx->clay_ctx = Clay_Initialize(arena,
+                                        (Clay_Dimensions){ clay_w, clay_h },
+                                        (Clay_ErrorHandler){ clay_error_cb, NULL });
+    }
     g_measure_ctx = ctx;
     Clay_SetMeasureTextFunction(measure_text_cb, NULL);
 
@@ -265,13 +280,17 @@ void KilnUI_handle_event(KilnUI *ctx, const SDL_Event *e)
 {
     switch (e->type) {
     case SDL_EVENT_MOUSE_MOTION:
-        Clay_SetPointerState((Clay_Vector2){ e->motion.x, e->motion.y },
-                             (e->motion.state & SDL_BUTTON_LMASK) != 0);
+        Clay_SetPointerState(
+            (Clay_Vector2){ e->motion.x * ctx->mouse_scale,
+                            e->motion.y * ctx->mouse_scale },
+            (e->motion.state & SDL_BUTTON_LMASK) != 0);
         break;
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
     case SDL_EVENT_MOUSE_BUTTON_UP:
-        Clay_SetPointerState((Clay_Vector2){ e->button.x, e->button.y },
-                             e->type == SDL_EVENT_MOUSE_BUTTON_DOWN);
+        Clay_SetPointerState(
+            (Clay_Vector2){ e->button.x * ctx->mouse_scale,
+                            e->button.y * ctx->mouse_scale },
+            e->type == SDL_EVENT_MOUSE_BUTTON_DOWN);
         break;
     case SDL_EVENT_MOUSE_WHEEL:
         Clay_UpdateScrollContainers(true,
@@ -279,15 +298,17 @@ void KilnUI_handle_event(KilnUI *ctx, const SDL_Event *e)
                                     0.016f);
         break;
     case SDL_EVENT_WINDOW_RESIZED:
-        Clay_SetLayoutDimensions((Clay_Dimensions){ (float)e->window.data1,
-                                                    (float)e->window.data2 });
-        /* FALLTHROUGH — also refresh dpi_scale */
     case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
         int pw, ph, lw, lh;
         SDL_GetWindowSizeInPixels(ctx->window, &pw, &ph);
         SDL_GetWindowSize(ctx->window, &lw, &lh);
-        if (lw > 0)
-            ctx->dpi_scale = (float)pw / (float)lw;
+        float pixel_ratio   = (lw > 0) ? (float)pw / (float)lw : 1.0f;
+        float display_scale = SDL_GetWindowDisplayScale(ctx->window);
+        if (display_scale < 1.0f) display_scale = 1.0f;
+        ctx->dpi_scale   = (pixel_ratio >= display_scale) ? pixel_ratio : display_scale;
+        ctx->mouse_scale = (lw > 0) ? (float)pw / ((float)lw * ctx->dpi_scale) : 1.0f;
+        Clay_SetLayoutDimensions((Clay_Dimensions){
+            (float)pw / ctx->dpi_scale, (float)ph / ctx->dpi_scale });
         break;
     }
     }
