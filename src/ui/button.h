@@ -30,8 +30,11 @@ typedef enum
 } UIBtnSize;
 
 /* --- Per-frame mouse state ---- */
-/* Call once before Clay_BeginLayout() with the frame's accumulated state. */
+/* Call once before Clay_BeginLayout() with the frame's accumulated state.
+ * UI_SetMouseState is kept for existing button-only callers.
+ * UI_SetPointerState also records pointer position for sliders/dropdowns. */
 void UI_SetMouseState(bool mouse_down, bool mouse_released);
+void UI_SetPointerState(bool mouse_down, bool mouse_released, float mouse_x, float mouse_y);
 
 /* ---- Main widget ---- */
 /* uid   : caller-assigned unique integer (e.g. __LINE__ or an enum constant)

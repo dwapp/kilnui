@@ -70,6 +70,15 @@ endif()
 # ---- Library: ui_components (reusable widgets) ----
 add_library(ui_components STATIC
     src/ui/button.c
+    src/ui/input.c
+    src/ui/checkbox.c
+    src/ui/radio.c
+    src/ui/label.c
+    src/ui/container.c
+    src/ui/slider.c
+    src/ui/dropdown.c
+    src/ui/progress.c
+    src/ui/tooltip.c
 )
 target_include_directories(ui_components PUBLIC
     ${CMAKE_SOURCE_DIR}/src
@@ -82,10 +91,10 @@ add_executable(clay_demo demo/main.c)
 target_link_libraries(clay_demo PRIVATE kilnui)
 add_dependencies(clay_demo shaders)
 
-# ---- Button gallery demo ----
-add_executable(button_demo demo/button_demo.c)
-target_link_libraries(button_demo PRIVATE kilnui ui_components)
-add_dependencies(button_demo shaders)
+# ---- Component gallery demo ----
+add_executable(component_gallery demo/component_gallery.c)
+target_link_libraries(component_gallery PRIVATE kilnui ui_components)
+add_dependencies(component_gallery shaders)
 
 # Helper macro: copy shaders + assets next to any demo executable
 macro(copy_demo_assets TARGET)
@@ -102,4 +111,4 @@ macro(copy_demo_assets TARGET)
 endmacro()
 
 copy_demo_assets(clay_demo)
-copy_demo_assets(button_demo)
+copy_demo_assets(component_gallery)

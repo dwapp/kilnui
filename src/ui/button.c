@@ -1,21 +1,29 @@
 /* src/ui/button.c — Reusable Clay button component implementation. */
 
 #include "button.h"
-#include <SDL3/SDL.h>
-#include <string.h>
+#include "ui_internal.h"
 
 /* ---- Per-frame mouse state (set via UI_SetMouseState) ---- */
-static bool s_mouse_down = false;
-static bool s_mouse_released = false;
+bool  UI__mouse_down = false;
+bool  UI__mouse_released = false;
+float UI__mouse_x = 0.0f;
+float UI__mouse_y = 0.0f;
 
 void UI_SetMouseState(bool mouse_down, bool mouse_released)
 {
-    s_mouse_down = mouse_down;
-    s_mouse_released = mouse_released;
+    UI_SetPointerState(mouse_down, mouse_released, UI__mouse_x, UI__mouse_y);
+}
+
+void UI_SetPointerState(bool mouse_down, bool mouse_released, float mouse_x, float mouse_y)
+{
+    UI__mouse_down = mouse_down;
+    UI__mouse_released = mouse_released;
+    UI__mouse_x = mouse_x;
+    UI__mouse_y = mouse_y;
 }
 
 /* ---- Colour palette (Catppuccin Mocha) ---- */
-#define C(r, g, b, a) ((Clay_Color){ r, g, b, a })
+#define C(r, g, b, a) UI_C(r, g, b, a)
 
 /* Background colours: [variant][state: 0=normal, 1=hover, 2=pressed, 3=disabled] */
 static const Clay_Color BG[4][4] = {
@@ -54,8 +62,8 @@ bool UI_Button(int uid, const char *label,
 {
     Clay_ElementId id = Clay_GetElementIdWithIndex(CLAY_STRING("UIBtn"), uid);
     bool hovered = !disabled && Clay_PointerOver(id);
-    bool pressed = hovered && s_mouse_down;
-    bool clicked = hovered && s_mouse_released && !disabled;
+    bool pressed = hovered && UI__mouse_down;
+    bool clicked = hovered && UI__mouse_released && !disabled;
 
     /* Pick state index */
     int state = 0;
@@ -70,7 +78,7 @@ bool UI_Button(int uid, const char *label,
     Clay_Color bg = BG[variant][state];
     Clay_Color fg = FG[variant][disabled ? 1 : 0];
 
-    Clay_String lbl = { .chars = label, .length = (int32_t)SDL_strlen(label) };
+    Clay_String lbl = UI__str(label);
 
     CLAY(id, {
                  .layout = {
