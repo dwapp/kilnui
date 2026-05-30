@@ -339,7 +339,7 @@ int main(int argc, char *argv[])
             Clay_RenderCommandArray cmds = Clay_EndLayout(dt);
             ClayGPUCtx_render(&ctx, cmds);
 
-            dirty = mouse_down;
+            dirty = false; /* SDL_WaitEvent drives the next frame */
         }
     }
 

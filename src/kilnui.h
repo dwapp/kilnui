@@ -42,6 +42,7 @@ typedef struct
     TTF_Font      *font;
     float          dpi_scale;   /* physical_px / logical_px (render scale) */
     float          mouse_scale; /* SDL logical mouse coords → Clay layout coords */
+    bool           dirty;       /* true = re-render needed this frame */
     int            font_size;
 
     GlyphCache glyph_cache;
@@ -89,6 +90,11 @@ void KilnUI_destroy(KilnUI *ctx);
  * Tries each path in `candidates` (NULL-terminated) in order.
  * Returns the first path that exists, or NULL. */
 const char *KilnUI_find_font(const char **candidates);
+
+/* Mark the context dirty so KilnUI_render redraws on the next call.
+ * Call this whenever application state changes (e.g. animation tick,
+ * data update) that is not triggered by an input event. */
+static inline void KilnUI_mark_dirty(KilnUI *ctx) { ctx->dirty = true; }
 
 /* ---- Backward-compatibility aliases (old ClayGPUCtx API) ---- */
 typedef KilnUI ClayGPUCtx;

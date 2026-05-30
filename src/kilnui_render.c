@@ -86,6 +86,16 @@ static void push_rect(float x, float y, float w, float h,
     s_rect_count++;
 }
 
+/* Track last TTF font size to avoid redundant TTF_SetFontSize calls. */
+static int s_last_phys_size = 0;
+
+static void set_font_size(TTF_Font *font, int phys_size)
+{
+    if (phys_size == s_last_phys_size) return;
+    TTF_SetFontSize(font, (float)phys_size);
+    s_last_phys_size = phys_size;
+}
+
 /* ---- Text batch (one per TEXT command, static to avoid stack bloat) ---- */
 typedef struct
 {
@@ -111,7 +121,7 @@ static void build_text_batch(KilnUI *ctx, TextBatch *tb,
      * Glyph metrics (w, h, bearing, advance) are then already in physical px. */
     int phys_size = (int)((float)req_size * scale + 0.5f);
     if (phys_size < 1) phys_size = 1;
-    TTF_SetFontSize(ctx->font, (float)phys_size);
+    set_font_size(ctx->font, phys_size);
 
     int   font_ascent = TTF_GetFontAscent(ctx->font); /* physical px */
     float cx = bb.x * scale;                          /* logical → physical */
@@ -192,6 +202,10 @@ static void build_text_batch(KilnUI *ctx, TextBatch *tb,
 /* ---- Main render function ---- */
 void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
 {
+    /* Reset font-size cache so the first batch correctly sets the size
+     * (measure_text_cb may have changed it since the last frame). */
+    s_last_phys_size = 0;
+
     int pw, ph;
     SDL_GetWindowSizeInPixels(ctx->window, &pw, &ph);
     float scale = ctx->dpi_scale;
@@ -235,9 +249,9 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
         }
     }
 
-    /* ===== Phase 2: Flush glyph uploads + upload all geometry ===== */
-    /* All newly rasterized glyphs are batched into ONE copy pass here,
-     * before the render pass begins (SDL_GPU forbids copy inside render pass). */
+    /* ===== Phase 2 + 3: single CommandBuffer — copy then render ===== */
+    /* Acquiring the swapchain texture first then doing copy + render in one
+     * submission halves the number of GPU round-trips vs two separate submits. */
     GlyphCache_flush_uploads(&ctx->glyph_cache);
 
     uint32_t rv_sz = (uint32_t)s_rect_count * 4 * sizeof(VertexRect);
@@ -245,6 +259,9 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
     uint32_t tv_sz = text_vtx_total * sizeof(VertexTex);
     uint32_t ti_sz = text_idx_total * sizeof(Uint16);
     uint32_t total = rv_sz + ri_sz + tv_sz + ti_sz;
+
+    SDL_GPUCommandBuffer *cmdbuf = SDL_AcquireGPUCommandBuffer(ctx->gpu);
+    if (!cmdbuf) return;
 
     if (total > 0) {
         ensure_gpu_buffer(ctx->gpu, &ctx->rect_vbuf, &ctx->rect_vbuf_cap,
@@ -258,7 +275,6 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
         ensure_transfer_buffer(ctx->gpu, &ctx->staging_tbuf,
                                &ctx->staging_tbuf_cap, total);
 
-        /* Pack: [rect_verts | rect_idx | text_verts | text_idx] */
         uint8_t *m   = SDL_MapGPUTransferBuffer(ctx->gpu, ctx->staging_tbuf, true);
         uint32_t off = 0;
         uint32_t off_rv = off;
@@ -283,9 +299,7 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
         }
         SDL_UnmapGPUTransferBuffer(ctx->gpu, ctx->staging_tbuf);
 
-        /* ONE copy pass, ONE submit for all geometry */
-        SDL_GPUCommandBuffer *cc = SDL_AcquireGPUCommandBuffer(ctx->gpu);
-        SDL_GPUCopyPass      *cp = SDL_BeginGPUCopyPass(cc);
+        SDL_GPUCopyPass *cp = SDL_BeginGPUCopyPass(cmdbuf);
         if (rv_sz) SDL_UploadToGPUBuffer(cp,
             &(SDL_GPUTransferBufferLocation){ .transfer_buffer = ctx->staging_tbuf, .offset = off_rv },
             &(SDL_GPUBufferRegion){ .buffer = ctx->rect_vbuf, .size = rv_sz }, true);
@@ -299,14 +313,8 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
             &(SDL_GPUTransferBufferLocation){ .transfer_buffer = ctx->staging_tbuf, .offset = off_ti },
             &(SDL_GPUBufferRegion){ .buffer = ctx->text_ibuf, .size = ti_sz }, true);
         SDL_EndGPUCopyPass(cp);
-        SDL_SubmitGPUCommandBuffer(cc);
     }
 
-    /* ===== Phase 3: Render pass — iterate Clay commands IN ORDER ===== */
-    /* Rendering in the original command order preserves Clay's Z-layering:
-     * rects and text are interleaved exactly as the layout engine intended. */
-    SDL_GPUCommandBuffer *cmdbuf = SDL_AcquireGPUCommandBuffer(ctx->gpu);
-    if (!cmdbuf) return;
 
     SDL_GPUTexture *swapchain = NULL;
     SDL_WaitAndAcquireGPUSwapchainTexture(cmdbuf, ctx->window, &swapchain, NULL, NULL);

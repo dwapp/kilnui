@@ -278,6 +278,7 @@ bool KilnUI_init(KilnUI *ctx, const char *title,
     SDL_SetGPUSwapchainParameters(ctx->gpu, ctx->window,
                                   SDL_GPU_SWAPCHAINCOMPOSITION_SDR,
                                   SDL_GPU_PRESENTMODE_VSYNC);
+    ctx->dirty = true; /* always render the first frame */
     return true;
 }
 
@@ -290,6 +291,7 @@ void KilnUI_handle_event(KilnUI *ctx, const SDL_Event *e)
             (Clay_Vector2){ e->motion.x * ctx->mouse_scale,
                             e->motion.y * ctx->mouse_scale },
             (e->motion.state & SDL_BUTTON_LMASK) != 0);
+        ctx->dirty = true;
         break;
     case SDL_EVENT_MOUSE_BUTTON_DOWN:
     case SDL_EVENT_MOUSE_BUTTON_UP:
@@ -297,11 +299,13 @@ void KilnUI_handle_event(KilnUI *ctx, const SDL_Event *e)
             (Clay_Vector2){ e->button.x * ctx->mouse_scale,
                             e->button.y * ctx->mouse_scale },
             e->type == SDL_EVENT_MOUSE_BUTTON_DOWN);
+        ctx->dirty = true;
         break;
     case SDL_EVENT_MOUSE_WHEEL:
         Clay_UpdateScrollContainers(true,
                                     (Clay_Vector2){ e->wheel.x * 30, e->wheel.y * 30 },
                                     0.016f);
+        ctx->dirty = true;
         break;
     case SDL_EVENT_WINDOW_RESIZED:
     case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
@@ -315,6 +319,7 @@ void KilnUI_handle_event(KilnUI *ctx, const SDL_Event *e)
         ctx->mouse_scale = (lw > 0) ? (float)pw / ((float)lw * ctx->dpi_scale) : 1.0f;
         Clay_SetLayoutDimensions((Clay_Dimensions){
             (float)pw / ctx->dpi_scale, (float)ph / ctx->dpi_scale });
+        ctx->dirty = true;
         break;
     }
     }
