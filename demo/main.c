@@ -5,7 +5,7 @@
  *   - Hover highlight (Clay pointer hit-testing)
  */
 
-#include "../src/clay_sdl3_gpu.h"
+#include "../src/kilnui.h"
 #include "../src/clay_colors.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>

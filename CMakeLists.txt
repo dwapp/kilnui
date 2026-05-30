@@ -48,22 +48,23 @@ endforeach()
 
 add_custom_target(shaders ALL DEPENDS ${SPV_OUTPUTS})
 
-# ---- Library: clay_sdl3_gpu ----
-add_library(clay_sdl3_gpu STATIC
-    src/clay_sdl3_gpu.c
+# ---- Library: kilnui ----
+add_library(kilnui STATIC
+    src/kilnui.c
+    src/kilnui_render.c
     src/glyph_cache.c
 )
-target_include_directories(clay_sdl3_gpu PUBLIC
+target_include_directories(kilnui PUBLIC
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/3rdparty/clay
 )
-target_link_libraries(clay_sdl3_gpu PUBLIC
+target_link_libraries(kilnui PUBLIC
     SDL3::SDL3
     SDL3_ttf::SDL3_ttf
 )
 # math library on Linux
 if(UNIX AND NOT APPLE)
-    target_link_libraries(clay_sdl3_gpu PUBLIC m)
+    target_link_libraries(kilnui PUBLIC m)
 endif()
 
 # ---- Library: ui_components (reusable widgets) ----
@@ -74,16 +75,16 @@ target_include_directories(ui_components PUBLIC
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/3rdparty/clay
 )
-target_link_libraries(ui_components PUBLIC clay_sdl3_gpu)
+target_link_libraries(ui_components PUBLIC kilnui)
 
 # ---- Demo executable ----
 add_executable(clay_demo demo/main.c)
-target_link_libraries(clay_demo PRIVATE clay_sdl3_gpu)
+target_link_libraries(clay_demo PRIVATE kilnui)
 add_dependencies(clay_demo shaders)
 
 # ---- Button gallery demo ----
 add_executable(button_demo demo/button_demo.c)
-target_link_libraries(button_demo PRIVATE clay_sdl3_gpu ui_components)
+target_link_libraries(button_demo PRIVATE kilnui ui_components)
 add_dependencies(button_demo shaders)
 
 # Helper macro: copy shaders + assets next to any demo executable

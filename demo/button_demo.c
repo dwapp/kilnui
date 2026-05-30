@@ -5,7 +5,7 @@
  * Run:   ./button_demo
  */
 
-#include "../src/clay_sdl3_gpu.h"
+#include "../src/kilnui.h"
 #include "../src/clay_colors.h"
 #include "../src/ui/button.h"
 #include <SDL3/SDL.h>
