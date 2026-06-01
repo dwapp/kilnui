@@ -3,16 +3,13 @@
 #include "button.h"
 #include "ui_internal.h"
 
-/* ---- Per-frame mouse state (set via UI_SetMouseState) ---- */
+#include "design_system.h"
+
+/* ---- Per-frame mouse state ---- */
 bool  UI__mouse_down = false;
 bool  UI__mouse_released = false;
 float UI__mouse_x = 0.0f;
 float UI__mouse_y = 0.0f;
-
-void UI_SetMouseState(bool mouse_down, bool mouse_released)
-{
-    UI_SetPointerState(mouse_down, mouse_released, UI__mouse_x, UI__mouse_y);
-}
 
 void UI_SetPointerState(bool mouse_down, bool mouse_released, float mouse_x, float mouse_y)
 {
@@ -22,24 +19,47 @@ void UI_SetPointerState(bool mouse_down, bool mouse_released, float mouse_x, flo
     UI__mouse_y = mouse_y;
 }
 
-/* ---- Colour palette (Catppuccin Mocha) ---- */
-#define C(r, g, b, a) UI_C(r, g, b, a)
+static Clay_Color get_btn_bg(UIBtnVariant variant, int state) {
+    if (state == 3) { /* Disabled */
+        if (variant == UI_BTN_PRIMARY)   return ds_theme->surface1;
+        if (variant == UI_BTN_SECONDARY) return ds_theme->crust;
+        if (variant == UI_BTN_GHOST)     return (Clay_Color){0,0,0,0};
+        if (variant == UI_BTN_DANGER)    return ds_theme->surface0;
+    }
+    if (variant == UI_BTN_PRIMARY) {
+        if (state == 0) return ds_theme->accent;
+        if (state == 1) return ds_theme->accent_alt;
+        return ds_theme->accent; /* pressed */
+    }
+    if (variant == UI_BTN_SECONDARY) {
+        if (state == 0) return ds_theme->surface0;
+        if (state == 1) return ds_theme->surface1;
+        return ds_theme->base; /* pressed */
+    }
+    if (variant == UI_BTN_GHOST) {
+        if (state == 0) return (Clay_Color){0,0,0,0};
+        if (state == 1) return ds_theme->surface0;
+        return ds_theme->surface1; /* pressed */
+    }
+    if (variant == UI_BTN_DANGER) {
+        Clay_Color c = ds_theme->error;
+        if (state == 1) { c.a = 200; return c; }
+        if (state == 2) { c.a = 255; return c; }
+        return c;
+    }
+    return (Clay_Color){0};
+}
 
-/* Background colours: [variant][state: 0=normal, 1=hover, 2=pressed, 3=disabled] */
-static const Clay_Color BG[4][4] = {
-    /* PRIMARY   */ { C(137, 112, 194, 255), C(155, 130, 210, 255), C(118, 96, 175, 255), C(69, 71, 90, 120) },
-    /* SECONDARY */ { C(49, 50, 68, 160), C(69, 71, 90, 200), C(39, 40, 58, 200), C(49, 50, 68, 80) },
-    /* GHOST     */ { C(0, 0, 0, 0), C(88, 91, 112, 80), C(88, 91, 112, 140), C(0, 0, 0, 0) },
-    /* DANGER    */ { C(210, 99, 128, 255), C(230, 115, 143, 255), C(190, 82, 112, 255), C(88, 60, 72, 120) },
-};
-
-/* Foreground (text) colours: [variant][disabled] */
-static const Clay_Color FG[4][2] = {
-    /* PRIMARY   */ { C(255, 255, 255, 255), C(166, 173, 200, 100) },
-    /* SECONDARY */ { C(180, 190, 254, 255), C(166, 173, 200, 100) },
-    /* GHOST     */ { C(166, 173, 200, 255), C(166, 173, 200, 80) },
-    /* DANGER    */ { C(255, 255, 255, 255), C(166, 173, 200, 100) },
-};
+static Clay_Color get_btn_fg(UIBtnVariant variant, bool disabled) {
+    if (disabled) return ds_theme->muted;
+    if (variant == UI_BTN_PRIMARY || variant == UI_BTN_DANGER) {
+        /* Contrast text for filled buttons (using base/crust usually) */
+        return ds_theme->base; 
+    }
+    if (variant == UI_BTN_SECONDARY) return ds_theme->text;
+    if (variant == UI_BTN_GHOST) return ds_theme->subtext;
+    return ds_theme->text;
+}
 
 /* ---- Size metrics ---- */
 typedef struct
@@ -75,8 +95,8 @@ bool UI_Button(int uid, const char *label,
         state = 1;
 
     const SizeInfo *sz = &SIZES[size];
-    Clay_Color bg = BG[variant][state];
-    Clay_Color fg = FG[variant][disabled ? 1 : 0];
+    Clay_Color bg = get_btn_bg(variant, state);
+    Clay_Color fg = get_btn_fg(variant, disabled);
 
     Clay_String lbl = UI__str(label);
 
@@ -99,5 +119,35 @@ bool UI_Button(int uid, const char *label,
                        });
     }
 
+    return clicked;
+}
+
+bool UI_IconButton(int uid, const char *icon, int size,
+                   UIBtnVariant variant, bool disabled)
+{
+    Clay_ElementId id = Clay_GetElementIdWithIndex(CLAY_STRING("UIIconBtn"), uid);
+    bool hovered = !disabled && Clay_PointerOver(id);
+    bool pressed = hovered && UI__mouse_down;
+    bool clicked = hovered && UI__mouse_released && !disabled;
+
+    int state = 0;
+    if (disabled) state = 3;
+    else if (pressed) state = 2;
+    else if (hovered) state = 1;
+
+    Clay_Color bg = get_btn_bg(variant, state);
+    Clay_Color fg = get_btn_fg(variant, disabled);
+
+    CLAY(id, {
+        .layout = {
+            .sizing = { CLAY_SIZING_FIXED((float)(size + 12)),
+                        CLAY_SIZING_FIXED((float)(size + 12)) },
+            .childAlignment = { CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER },
+        },
+        .backgroundColor = bg,
+        .cornerRadius = CLAY_CORNER_RADIUS(DS_RADIUS_MD),
+    }) {
+        CLAY_TEXT(UI__str(icon), { .textColor = fg, .fontSize = (uint16_t)size });
+    }
     return clicked;
 }

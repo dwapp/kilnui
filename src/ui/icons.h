@@ -212,41 +212,4 @@ static inline void UI_Icon(int uid, const char *icon, int size, Clay_Color color
     }
 }
 
-/* Icon button: renders icon inside a button shell. Returns true on click. */
-static inline bool UI_IconButton(int uid, const char *icon, int size,
-                                 UIBtnVariant variant, bool disabled)
-{
-    Clay_ElementId id = Clay_GetElementIdWithIndex(CLAY_STRING("UIIconBtn"), uid);
-    bool hovered = !disabled && Clay_PointerOver(id);
-    bool pressed = hovered && UI__mouse_down;
-    bool clicked = hovered && UI__mouse_released && !disabled;
-
-    static const Clay_Color BG_NRM[4] = {
-        {137,112,194,255}, {49,50,68,160}, {0,0,0,0}, {210,99,128,255}
-    };
-    static const Clay_Color BG_HOV[4] = {
-        {155,130,210,255}, {69,71,90,200}, {88,91,112,80}, {230,115,143,255}
-    };
-    static const Clay_Color FG_COL[4] = {
-        {255,255,255,255}, {180,190,254,255}, {166,173,200,255}, {255,255,255,255}
-    };
-
-    Clay_Color bg = pressed ? BG_HOV[variant] : hovered ? BG_HOV[variant] : BG_NRM[variant];
-    if (variant == UI_BTN_GHOST && !hovered) bg = (Clay_Color){0,0,0,0};
-    Clay_Color fg = disabled ? (Clay_Color){166,173,200,80} : FG_COL[variant];
-
-    CLAY(id, {
-        .layout = {
-            .sizing = { CLAY_SIZING_FIXED((float)(size + 12)),
-                        CLAY_SIZING_FIXED((float)(size + 12)) },
-            .childAlignment = { CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER },
-        },
-        .backgroundColor = bg,
-        .cornerRadius = CLAY_CORNER_RADIUS(6),
-    }) {
-        CLAY_TEXT(UI__str(icon), { .textColor = fg, .fontSize = (uint16_t)size });
-    }
-    return clicked;
-}
-
 #endif /* UI_ICONS_H */

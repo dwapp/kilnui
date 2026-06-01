@@ -1,5 +1,6 @@
 #include "container.h"
 #include "ui_internal.h"
+#include "design_system.h"
 
 Clay_ElementDeclaration UI_ContainerConfig(UIContainerVariant variant)
 {
@@ -10,7 +11,7 @@ Clay_ElementDeclaration UI_ContainerConfig(UIContainerVariant variant)
             .childGap = 12,
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
         },
-        .backgroundColor = UI_COL_SURFACE,
+        .backgroundColor = ds_theme->surface0,
         .cornerRadius = CLAY_CORNER_RADIUS(10),
     };
 
@@ -26,7 +27,7 @@ Clay_ElementDeclaration UI_ContainerConfig(UIContainerVariant variant)
         cfg.cornerRadius = CLAY_CORNER_RADIUS(0);
     } else if (variant == UI_CONTAINER_CARD) {
         cfg.layout.padding = (Clay_Padding){ 18, 18, 16, 16 };
-        cfg.backgroundColor = UI_C(30, 30, 46, 235);
+        cfg.backgroundColor = ds_theme->surface0;
         cfg.cornerRadius = CLAY_CORNER_RADIUS(8);
     }
 

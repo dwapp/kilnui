@@ -1,5 +1,6 @@
 #include "slider.h"
 #include "ui_internal.h"
+#include "design_system.h"
 
 UISliderResult UI_Slider(int uid, const char *label, float value,
                          float min_value, float max_value, bool disabled)
@@ -31,7 +32,7 @@ UISliderResult UI_Slider(int uid, const char *label, float value,
     }) {
         if (label && label[0]) {
             CLAY_TEXT(UI__str(label), {
-                .textColor = disabled ? UI_COL_DISABLED : UI_COL_MUTED,
+                .textColor = disabled ? ds_theme->muted : ds_theme->subtext,
                 .fontSize = 12,
             });
         }
@@ -44,12 +45,12 @@ UISliderResult UI_Slider(int uid, const char *label, float value,
         }) {
             CLAY(CLAY_SIDI(CLAY_STRING("UISliderTrack"), uid), {
                 .layout = { .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(8) } },
-                .backgroundColor = disabled ? UI_C(49, 50, 68, 90) : UI_COL_SURFACE,
+                .backgroundColor = disabled ? ds_theme->surface0 : ds_theme->surface1,
                 .cornerRadius = CLAY_CORNER_RADIUS(4),
             }) {
                 CLAY(CLAY_SIDI(CLAY_STRING("UISliderFill"), uid), {
                     .layout = { .sizing = { CLAY_SIZING_PERCENT(pct), CLAY_SIZING_GROW(0) } },
-                    .backgroundColor = disabled ? UI_COL_DISABLED : (active ? UI_COL_ACCENT2 : UI_COL_ACCENT),
+                    .backgroundColor = disabled ? ds_theme->surface2 : (active ? ds_theme->accent_alt : ds_theme->accent),
                     .cornerRadius = CLAY_CORNER_RADIUS(4),
                 }) {}
             }

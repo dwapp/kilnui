@@ -1,13 +1,14 @@
 #include "radio.h"
 #include "ui_internal.h"
+#include "design_system.h"
 
 bool UI_Radio(int uid, const char *label, bool selected, bool disabled)
 {
     Clay_ElementId id = Clay_GetElementIdWithIndex(CLAY_STRING("UIRadio"), uid);
     bool hovered = !disabled && Clay_PointerOver(id);
     bool clicked = hovered && UI__mouse_released;
-    Clay_Color outer = disabled ? UI_COL_SURFACE : (hovered ? UI_COL_SURFACE2 : UI_COL_SURFACE);
-    Clay_Color dot = selected ? (disabled ? UI_COL_DISABLED : UI_COL_ACCENT) : UI_C(0, 0, 0, 0);
+    Clay_Color outer = disabled ? ds_theme->surface0 : (hovered ? ds_theme->surface1 : ds_theme->surface0);
+    Clay_Color dot = selected ? (disabled ? ds_theme->muted : ds_theme->accent) : (Clay_Color){0};
 
     CLAY(id, {
         .layout = {
@@ -32,7 +33,7 @@ bool UI_Radio(int uid, const char *label, bool selected, bool disabled)
             }) {}
         }
         CLAY_TEXT(UI__str(label), {
-            .textColor = disabled ? UI_COL_DISABLED : UI_COL_TEXT,
+            .textColor = disabled ? ds_theme->muted : ds_theme->text,
             .fontSize = 14,
         });
     }

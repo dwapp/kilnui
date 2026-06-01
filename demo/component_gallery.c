@@ -6,13 +6,12 @@
  */
 
 #include "../src/kilnui.h"
-#include "../src/clay_colors.h"
+#include "../src/ui/ui.h"
 #include "../src/ui/button.h"
 #include "../src/ui/checkbox.h"
 #include "../src/ui/container.h"
 #include "../src/ui/dropdown.h"
 #include "../src/ui/input.h"
-#include "../src/ui/label.h"
 #include "../src/ui/progress.h"
 #include "../src/ui/radio.h"
 #include "../src/ui/slider.h"
@@ -63,13 +62,13 @@ static void separator(int uid)
 {
     CLAY(CLAY_SIDI(CLAY_STRING("Sep"), uid), {
         .layout = { .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(1) } },
-        .backgroundColor = COL_OVERLAY,
+        .backgroundColor = ds_theme->overlay,
     }) {}
 }
 
 static void button_row(void)
 {
-    UI_Label(10, "Buttons", UI_LABEL_CAPTION);
+    TY_Text(10, "Buttons", TY_CAPTION);
     UI_Container(20, UI_CONTAINER_ROW) {
         if (UI_Button(ID_BTN_PRIMARY, "Primary", UI_BTN_PRIMARY, UI_BTN_MD, false)) {
             g_clicks++;
@@ -93,8 +92,8 @@ static void button_row(void)
 static void choice_panel(void)
 {
     UI_Container(30, UI_CONTAINER_CARD) {
-        UI_Label(31, "Selection", UI_LABEL_HEADING);
-        UI_Label(32, "Checkbox and radio components", UI_LABEL_MUTED);
+        TY_Text(31, "Selection", TY_H3);
+        TY_Text(32, "Checkbox and radio components", TY_BODY);
 
         separator(33);
 
@@ -127,8 +126,8 @@ static void choice_panel(void)
 static void form_panel(void)
 {
     UI_Container(40, UI_CONTAINER_CARD) {
-        UI_Label(41, "Form", UI_LABEL_HEADING);
-        UI_Label(42, "Input, dropdown, slider, progress, and tooltip", UI_LABEL_MUTED);
+        TY_Text(41, "Form", TY_H3);
+        TY_Text(42, "Input, dropdown, slider, progress, and tooltip", TY_BODY);
 
         separator(43);
 
@@ -185,8 +184,8 @@ static void status_bar(void)
              g_status, g_clicks, (char)('A' + g_mode), g_volume * 100.0f);
 
     UI_Container(50, UI_CONTAINER_PANEL) {
-        UI_Label(51, "Current state", UI_LABEL_CAPTION);
-        UI_Label(52, buf, UI_LABEL_BODY);
+        TY_Text(51, "Current state", TY_CAPTION);
+        TY_Text(52, buf, TY_BODY);
     }
 }
 
@@ -199,7 +198,7 @@ static void ui_build(void)
             .childGap = 16,
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
         },
-        .backgroundColor = COL_BASE,
+        .backgroundColor = ds_theme->base,
     }) {
         CLAY(CLAY_ID("Title"), {
             .layout = {
@@ -208,7 +207,7 @@ static void ui_build(void)
             },
         }) {
             CLAY_TEXT(CLAY_STRING("KilnUI Component Gallery"), {
-                .textColor = COL_TEXT,
+                .textColor = ds_theme->text,
                 .fontSize = 26,
             });
         }
@@ -267,7 +266,7 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
-    ClayGPUCtx ctx;
+    KilnUI ctx;
     static const char *font_candidates[] = {
         "assets/Inter-Regular.ttf",
         "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
@@ -275,14 +274,14 @@ int main(int argc, char *argv[])
         "/usr/share/fonts/opentype/noto/NotoSans-Regular.ttf",
         NULL
     };
-    const char *font = ClayGPUCtx_find_font(font_candidates);
+    const char *font = KilnUI_find_font(font_candidates);
     if (!font) {
         SDL_Log("No usable font found");
         return 1;
     }
     SDL_Log("Using font: %s", font);
-    if (!ClayGPUCtx_init(&ctx, "KilnUI Component Gallery", 860, 720, font, 16)) {
-        SDL_Log("ClayGPUCtx_init failed");
+    if (!KilnUI_init(&ctx, "KilnUI Component Gallery", 860, 720, font, 16)) {
+        SDL_Log("KilnUI_init failed");
         return 1;
     }
 
@@ -299,15 +298,7 @@ int main(int argc, char *argv[])
         mouse_released = false;
 
         if (!dirty) {
-            if (!SDL_WaitEvent(&e))
-                break;
-            dirty = true;
-            if (e.type == SDL_EVENT_QUIT)
-                break;
-            if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE)
-                break;
-            handle_demo_event(&e, &mouse_down, &mouse_released, &mouse_x, &mouse_y);
-            ClayGPUCtx_handle_event(&ctx, &e);
+            SDL_WaitEvent(NULL);
         }
 
         while (SDL_PollEvent(&e)) {
@@ -321,7 +312,7 @@ int main(int argc, char *argv[])
                 break;
             }
             handle_demo_event(&e, &mouse_down, &mouse_released, &mouse_x, &mouse_y);
-            ClayGPUCtx_handle_event(&ctx, &e);
+            KilnUI_handle_event(&ctx, &e);
         }
 
         if (!running)
@@ -337,12 +328,12 @@ int main(int argc, char *argv[])
             Clay_BeginLayout();
             ui_build();
             Clay_RenderCommandArray cmds = Clay_EndLayout(dt);
-            ClayGPUCtx_render(&ctx, cmds);
+            KilnUI_render(&ctx, cmds);
 
             dirty = false; /* SDL_WaitEvent drives the next frame */
         }
     }
 
-    ClayGPUCtx_destroy(&ctx);
+    KilnUI_destroy(&ctx);
     return 0;
 }

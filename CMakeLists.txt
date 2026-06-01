@@ -73,7 +73,6 @@ add_library(ui_components STATIC
     src/ui/input.c
     src/ui/checkbox.c
     src/ui/radio.c
-    src/ui/label.c
     src/ui/container.c
     src/ui/slider.c
     src/ui/dropdown.c

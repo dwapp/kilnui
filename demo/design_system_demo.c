@@ -379,10 +379,10 @@ static void tab_bar(void)
         /* Theme toggle */
         Clay_ElementId thm_id = Clay_GetElementIdWithIndex(CLAY_STRING("ThemeToggle"), 0);
         bool thm_hov = Clay_PointerOver(thm_id);
-        if (thm_hov && UI__mouse_released)
-            DS_SetTheme(g_dark_mode ? &DS_THEME_LIGHT : &DS_THEME_DARK);
-        if (thm_hov && UI__mouse_released)
-            g_dark_mode = !g_dark_mode;
+        if (thm_hov && UI__mouse_released) {
+            /* Note: We handle the actual theme toggle at the start of the next frame
+             * to avoid changing themes mid-layout. */
+        }
 
         CLAY(thm_id, {
             .layout = {
@@ -474,17 +474,7 @@ int main(int argc, char *argv[])
         mouse_released = false;
 
         if (!dirty) {
-            if (!SDL_WaitEvent(&e)) break;
-            dirty = true;
-            if (e.type == SDL_EVENT_QUIT) break;
-            if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE) break;
-            if (e.type == SDL_EVENT_MOUSE_MOTION)
-                { mx = e.motion.x; my = e.motion.y; }
-            else if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
-                { mouse_down = true;  mx = e.button.x; my = e.button.y; }
-            else if (e.type == SDL_EVENT_MOUSE_BUTTON_UP)
-                { mouse_down = false; mouse_released = true; mx = e.button.x; my = e.button.y; }
-            KilnUI_handle_event(&ctx, &e);
+            SDL_WaitEvent(NULL);
         }
 
         while (SDL_PollEvent(&e)) {
@@ -506,6 +496,13 @@ int main(int argc, char *argv[])
             float dt = (float)(now - last) / (float)SDL_GetPerformanceFrequency();
             last = now;
             UI_SetPointerState(mouse_down, mouse_released, mx, my);
+
+            /* Check theme toggle */
+            Clay_ElementId thm_id = Clay_GetElementIdWithIndex(CLAY_STRING("ThemeToggle"), 0);
+            if (Clay_PointerOver(thm_id) && mouse_released) {
+                g_dark_mode = !g_dark_mode;
+                DS_SetTheme(g_dark_mode ? &DS_THEME_DARK : &DS_THEME_LIGHT);
+            }
 
             Clay_BeginLayout();
             ui_build();

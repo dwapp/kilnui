@@ -35,7 +35,6 @@
 #include "dropdown.h"
 #include "icons.h"
 #include "input.h"
-#include "label.h"
 #include "progress.h"
 #include "radio.h"
 #include "slider.h"

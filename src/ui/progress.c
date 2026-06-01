@@ -1,5 +1,6 @@
 #include "progress.h"
 #include "ui_internal.h"
+#include "design_system.h"
 
 void UI_Progress(int uid, const char *label, float value, float max_value)
 {
@@ -13,16 +14,16 @@ void UI_Progress(int uid, const char *label, float value, float max_value)
         },
     }) {
         if (label && label[0]) {
-            CLAY_TEXT(UI__str(label), { .textColor = UI_COL_MUTED, .fontSize = 12 });
+            CLAY_TEXT(UI__str(label), { .textColor = ds_theme->muted, .fontSize = 12 });
         }
         CLAY(CLAY_SIDI(CLAY_STRING("UIProgressTrack"), uid), {
             .layout = { .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(10) } },
-            .backgroundColor = UI_COL_SURFACE,
+            .backgroundColor = ds_theme->surface0,
             .cornerRadius = CLAY_CORNER_RADIUS(5),
         }) {
             CLAY(CLAY_SIDI(CLAY_STRING("UIProgressFill"), uid), {
                 .layout = { .sizing = { CLAY_SIZING_PERCENT(pct), CLAY_SIZING_GROW(0) } },
-                .backgroundColor = UI_COL_ACCENT,
+                .backgroundColor = ds_theme->accent,
                 .cornerRadius = CLAY_CORNER_RADIUS(5),
             }) {}
         }

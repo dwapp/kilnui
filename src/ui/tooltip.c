@@ -1,5 +1,6 @@
 #include "tooltip.h"
 #include "ui_internal.h"
+#include "design_system.h"
 
 void UI_Tooltip(int uid, const char *text, bool visible)
 {
@@ -12,11 +13,11 @@ void UI_Tooltip(int uid, const char *text, bool visible)
             .padding = { 10, 10, 6, 6 },
             .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
         },
-        .backgroundColor = UI_C(17, 17, 27, 245),
+        .backgroundColor = ds_theme->overlay,
         .cornerRadius = CLAY_CORNER_RADIUS(6),
     }) {
         CLAY_TEXT(UI__str(text), {
-            .textColor = UI_COL_TEXT,
+            .textColor = ds_theme->text,
             .fontSize = 12,
         });
     }

@@ -64,14 +64,7 @@
 #define DS_HEIGHT_LG  48
 #define DS_HEIGHT_XL  56
 
-/* ================================================================
- * Shadow  (stored as a color overlay; actual blur via future API)
- * ================================================================ */
-typedef struct { Clay_Color color; int offset_y; int blur; } DSShadow;
-#define DS_SHADOW_SM  ((DSShadow){ {0,0,0,60},  2, 4  })
-#define DS_SHADOW_MD  ((DSShadow){ {0,0,0,90},  4, 12 })
-#define DS_SHADOW_LG  ((DSShadow){ {0,0,0,120}, 8, 24 })
-
+/* ---- Color Tokens ---- */
 /* ================================================================
  * Color variant enum  (8 semantic roles)
  * ================================================================ */

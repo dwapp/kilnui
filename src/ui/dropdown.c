@@ -1,5 +1,6 @@
 #include "dropdown.h"
 #include "ui_internal.h"
+#include "design_system.h"
 
 UIDropdownResult UI_Dropdown(int uid, const char *label,
                              const char *const *items, int item_count,
@@ -19,7 +20,7 @@ UIDropdownResult UI_Dropdown(int uid, const char *label,
     }) {
         if (label && label[0]) {
             CLAY_TEXT(UI__str(label), {
-                .textColor = disabled ? UI_COL_DISABLED : UI_COL_MUTED,
+                .textColor = disabled ? ds_theme->surface2 : ds_theme->muted,
                 .fontSize = 12,
             });
         }
@@ -34,12 +35,12 @@ UIDropdownResult UI_Dropdown(int uid, const char *label,
                 .childGap = 8,
                 .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
             },
-            .backgroundColor = disabled ? UI_C(49, 50, 68, 90) :
-                (header_hovered ? UI_COL_SURFACE2 : UI_COL_SURFACE),
-            .cornerRadius = CLAY_CORNER_RADIUS(7),
+            .backgroundColor = disabled ? ds_theme->surface0 :
+                (header_hovered ? ds_theme->surface1 : ds_theme->surface0),
+            .cornerRadius = CLAY_CORNER_RADIUS(DS_RADIUS_MD),
         }) {
             CLAY_TEXT(UI__str(selected), {
-                .textColor = disabled ? UI_COL_DISABLED : UI_COL_TEXT,
+                .textColor = disabled ? ds_theme->muted : ds_theme->text,
                 .fontSize = 14,
             });
         }
@@ -52,15 +53,17 @@ UIDropdownResult UI_Dropdown(int uid, const char *label,
                     .childGap = 2,
                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
                 },
-                .backgroundColor = UI_C(30, 30, 46, 245),
-                .cornerRadius = CLAY_CORNER_RADIUS(7),
+                .backgroundColor = ds_theme->overlay,
+                .cornerRadius = CLAY_CORNER_RADIUS(DS_RADIUS_MD),
             }) {
                 for (int i = 0; i < item_count; i++) {
-                    Clay_ElementId item_id = Clay_GetElementIdWithIndex(CLAY_STRING("UIDropdownItem"),
-                                                                        (uint32_t)(uid * 1024 + i));
+                    Clay_ElementId item_id = Clay__HashStringWithOffset(CLAY_STRING("UIDropdownItem"), i, uid);
                     bool item_hovered = Clay_PointerOver(item_id);
                     if (item_hovered && UI__mouse_released)
                         chosen = i;
+
+                    Clay_Color sel_bg = ds_theme->accent;
+                    sel_bg.a = 80;
 
                     CLAY(item_id, {
                         .layout = {
@@ -68,12 +71,12 @@ UIDropdownResult UI_Dropdown(int uid, const char *label,
                             .padding = { 8, 8, 5, 5 },
                             .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
                         },
-                        .backgroundColor = item_hovered ? UI_COL_SURFACE2 :
-                            (i == selected_index ? UI_C(137, 112, 194, 80) : UI_C(0, 0, 0, 0)),
-                        .cornerRadius = CLAY_CORNER_RADIUS(5),
+                        .backgroundColor = item_hovered ? ds_theme->surface2 :
+                            (i == selected_index ? sel_bg : (Clay_Color){0}),
+                        .cornerRadius = CLAY_CORNER_RADIUS(DS_RADIUS_SM),
                     }) {
                         CLAY_TEXT(UI__str(items[i]), {
-                            .textColor = i == selected_index ? UI_COL_ACCENT2 : UI_COL_TEXT,
+                            .textColor = i == selected_index ? ds_theme->accent : ds_theme->text,
                             .fontSize = 14,
                         });
                     }

@@ -1,5 +1,6 @@
 #include "input.h"
 #include "ui_internal.h"
+#include "design_system.h"
 
 UIInputResult UI_Input(int uid, const char *label, const char *value,
                        const char *placeholder, bool focused, bool disabled)
@@ -19,7 +20,7 @@ UIInputResult UI_Input(int uid, const char *label, const char *value,
     }) {
         if (label && label[0]) {
             CLAY_TEXT(UI__str(label), {
-                .textColor = disabled ? UI_COL_DISABLED : UI_COL_MUTED,
+                .textColor = disabled ? ds_theme->surface2 : ds_theme->muted,
                 .fontSize = 12,
             });
         }
@@ -29,13 +30,13 @@ UIInputResult UI_Input(int uid, const char *label, const char *value,
                 .padding = { 12, 12, 8, 8 },
                 .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
             },
-            .backgroundColor = disabled ? UI_C(49, 50, 68, 90) :
-                (focused ? UI_COL_SURFACE2 : (hovered ? UI_C(69, 71, 90, 190) : UI_COL_SURFACE)),
+            .backgroundColor = disabled ? ds_theme->surface0 :
+                (focused ? ds_theme->surface1 : (hovered ? ds_theme->surface1 : ds_theme->surface0)),
             .cornerRadius = CLAY_CORNER_RADIUS(7),
         }) {
             CLAY_TEXT(UI__str(shown), {
-                .textColor = disabled ? UI_COL_DISABLED :
-                    (showing_placeholder ? UI_COL_MUTED : UI_COL_TEXT),
+                .textColor = disabled ? ds_theme->muted :
+                    (showing_placeholder ? ds_theme->muted : ds_theme->text),
                 .fontSize = 14,
             });
         }

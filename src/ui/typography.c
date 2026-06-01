@@ -63,7 +63,7 @@ void TY_LabelValue(int uid, const char *label, const char *value)
                       { .textColor = ds_theme->muted, .fontSize = TY_FS[TY_CAPTION] });
         }
         /* Value */
-        CLAY(CLAY_SIDI(CLAY_STRING("TYVal"), uid + 100000), {
+        CLAY(CLAY_SIDI(CLAY_STRING("TYVal"), uid), {
             .layout = { .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) } },
         }) {
             CLAY_TEXT(UI__str(value),

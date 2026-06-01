@@ -31,9 +31,7 @@ typedef enum
 
 /* --- Per-frame mouse state ---- */
 /* Call once before Clay_BeginLayout() with the frame's accumulated state.
- * UI_SetMouseState is kept for existing button-only callers.
  * UI_SetPointerState also records pointer position for sliders/dropdowns. */
-void UI_SetMouseState(bool mouse_down, bool mouse_released);
 void UI_SetPointerState(bool mouse_down, bool mouse_released, float mouse_x, float mouse_y);
 
 /* ---- Main widget ---- */
@@ -41,5 +39,8 @@ void UI_SetPointerState(bool mouse_down, bool mouse_released, float mouse_x, flo
  * Returns true the frame the button is clicked (mouse released over it). */
 bool UI_Button(int uid, const char *label,
                UIBtnVariant variant, UIBtnSize size, bool disabled);
+
+bool UI_IconButton(int uid, const char *icon, int size,
+                   UIBtnVariant variant, bool disabled);
 
 #endif /* UI_BUTTON_H */
