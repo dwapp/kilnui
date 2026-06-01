@@ -79,6 +79,10 @@ add_library(ui_components STATIC
     src/ui/dropdown.c
     src/ui/progress.c
     src/ui/tooltip.c
+    # Design system
+    src/ui/design_system.c
+    src/ui/typography.c
+    src/ui/theme.c
 )
 target_include_directories(ui_components PUBLIC
     ${CMAKE_SOURCE_DIR}/src
@@ -96,6 +100,12 @@ add_executable(component_gallery demo/component_gallery.c)
 target_link_libraries(component_gallery PRIVATE kilnui ui_components)
 add_dependencies(component_gallery shaders)
 
+# ---- Design system demo ----
+add_executable(design_system_demo demo/design_system_demo.c)
+target_link_libraries(design_system_demo PRIVATE kilnui ui_components)
+add_dependencies(design_system_demo shaders)
+
+
 # Helper macro: copy shaders + assets next to any demo executable
 macro(copy_demo_assets TARGET)
     add_custom_command(TARGET ${TARGET} POST_BUILD
@@ -112,3 +122,4 @@ endmacro()
 
 copy_demo_assets(clay_demo)
 copy_demo_assets(component_gallery)
+copy_demo_assets(design_system_demo)
