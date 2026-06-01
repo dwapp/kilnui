@@ -96,12 +96,4 @@ const char *KilnUI_find_font(const char **candidates);
  * data update) that is not triggered by an input event. */
 static inline void KilnUI_mark_dirty(KilnUI *ctx) { ctx->dirty = true; }
 
-/* ---- Backward-compatibility aliases (old ClayGPUCtx API) ---- */
-typedef KilnUI ClayGPUCtx;
-#define ClayGPUCtx_init         KilnUI_init
-#define ClayGPUCtx_handle_event KilnUI_handle_event
-#define ClayGPUCtx_render       KilnUI_render
-#define ClayGPUCtx_destroy      KilnUI_destroy
-#define ClayGPUCtx_find_font    KilnUI_find_font
-
 #endif /* KILNUI_H */

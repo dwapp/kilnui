@@ -6,7 +6,7 @@
  */
 
 #include "../src/kilnui.h"
-#include "../src/clay_colors.h"
+#include "../src/ui/ui.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <math.h>
@@ -30,7 +30,7 @@ static void ui_sidebar(void)
                                      .childGap = 8,
                                      .layoutDirection = CLAY_TOP_TO_BOTTOM,
                                  },
-                                 .backgroundColor = COL_SURFACE0,
+                                 .backgroundColor = ds_theme->surface0,
                                  .cornerRadius = CLAY_CORNER_RADIUS(12),
                              })
     {
@@ -43,7 +43,7 @@ static void ui_sidebar(void)
                               })
         {
             CLAY_TEXT(CLAY_STRING("Kiln UI"), {
-                                                        .textColor = COL_MAUVE,
+                                                        .textColor = ds_theme->accent,
                                                         .fontSize = 18,
                                                     });
         }
@@ -51,14 +51,14 @@ static void ui_sidebar(void)
         /* Separator */
         CLAY(CLAY_ID("Sep"), {
                                  .layout = { .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(1) } },
-                                 .backgroundColor = COL_OVERLAY,
+                                 .backgroundColor = ds_theme->surface2,
                              })
         {
         }
 
         /* Nav items */
         const char *labels[] = { "Dashboard", "Components", "Settings", "About" };
-        Clay_Color colors[] = { COL_MAUVE, COL_GREEN, COL_PEACH, COL_BLUE };
+        Clay_Color colors[] = { ds_theme->mauve, ds_theme->green, ds_theme->peach, ds_theme->blue };
         for (int i = 0; i < 4; i++) {
             Clay_String lbl = { .chars = labels[i], .length = (int32_t)SDL_strlen(labels[i]) };
             Clay_ElementId eid = Clay_GetElementIdWithIndex(CLAY_STRING("Nav"), i);
@@ -69,12 +69,12 @@ static void ui_sidebar(void)
                                                            .padding = { 12, 12, 8, 8 },
                                                            .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
                                                        },
-                                                       .backgroundColor = hovered ? COL_SURFACE1 : (Clay_Color){ 0, 0, 0, 0 },
+                                                       .backgroundColor = hovered ? ds_theme->surface1 : (Clay_Color){ 0, 0, 0, 0 },
                                                        .cornerRadius = CLAY_CORNER_RADIUS(8),
                                                    })
             {
                 CLAY_TEXT(lbl, {
-                                   .textColor = hovered ? colors[i] : COL_SUBTEXT,
+                                   .textColor = hovered ? colors[i] : ds_theme->subtext,
                                    .fontSize = 14,
                                });
             }
@@ -98,11 +98,11 @@ static void ui_stat_card(int idx, const char *title, const char *value,
                                                       .childGap = 8,
                                                       .layoutDirection = CLAY_TOP_TO_BOTTOM,
                                                   },
-                                                  .backgroundColor = hov ? col_hover(COL_SURFACE0) : COL_SURFACE0,
+                                                  .backgroundColor = hov ? col_hover(ds_theme->surface0) : ds_theme->surface0,
                                                   .cornerRadius = CLAY_CORNER_RADIUS(10),
                                               })
     {
-        CLAY_TEXT(t, { .textColor = COL_SUBTEXT, .fontSize = 13 });
+        CLAY_TEXT(t, { .textColor = ds_theme->subtext, .fontSize = 13 });
         CLAY_TEXT(v, { .textColor = accent, .fontSize = 28 });
     }
 }
@@ -119,10 +119,10 @@ static void ui_progress(int idx, const char *label, float pct, Clay_Color color)
                                                   },
                                               })
     {
-        CLAY_TEXT(l, { .textColor = COL_SUBTEXT, .fontSize = 12 });
+        CLAY_TEXT(l, { .textColor = ds_theme->subtext, .fontSize = 12 });
         CLAY(CLAY_SIDI(CLAY_STRING("PBg"), idx), {
                                                      .layout = { .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(10) } },
-                                                     .backgroundColor = COL_SURFACE1,
+                                                     .backgroundColor = ds_theme->surface1,
                                                      .cornerRadius = CLAY_CORNER_RADIUS(5),
                                                  })
         {
@@ -149,7 +149,7 @@ static void ui_scroll_list(void)
                                  })
     {
         CLAY_TEXT(CLAY_STRING("Event Log (scroll me)"), {
-                                                            .textColor = COL_SUBTEXT,
+                                                            .textColor = ds_theme->subtext,
                                                             .fontSize = 13,
                                                         });
 
@@ -160,7 +160,7 @@ static void ui_scroll_list(void)
                                             .childGap = 6,
                                             .layoutDirection = CLAY_TOP_TO_BOTTOM,
                                         },
-                                        .backgroundColor = COL_SURFACE1,
+                                        .backgroundColor = ds_theme->surface1,
                                         .cornerRadius = CLAY_CORNER_RADIUS(8),
                                         .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() },
                                     })
@@ -192,12 +192,12 @@ static void ui_scroll_list(void)
                                                                .padding = { 10, 10, 6, 6 },
                                                                .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
                                                            },
-                                                           .backgroundColor = hov ? COL_OVERLAY : (Clay_Color){ 0, 0, 0, 0 },
+                                                           .backgroundColor = hov ? ds_theme->overlay : (Clay_Color){ 0, 0, 0, 0 },
                                                            .cornerRadius = CLAY_CORNER_RADIUS(4),
                                                        })
                 {
                     CLAY_TEXT(s, {
-                                     .textColor = hov ? COL_TEXT : COL_SUBTEXT,
+                                     .textColor = hov ? ds_theme->text : ds_theme->subtext,
                                      .fontSize = 13,
                                  });
                 }
@@ -220,7 +220,7 @@ static void ui_content(void)
     {
         /* Title */
         CLAY_TEXT(CLAY_STRING("Dashboard"), {
-                                                .textColor = COL_TEXT,
+                                                .textColor = ds_theme->text,
                                                 .fontSize = 24,
                                             });
 
@@ -232,10 +232,10 @@ static void ui_content(void)
                                       },
                                   })
         {
-            ui_stat_card(0, "Rectangles", "24", COL_MAUVE);
-            ui_stat_card(1, "Glyphs", "156", COL_GREEN);
-            ui_stat_card(2, "Frame Time", "2.1ms", COL_PEACH);
-            ui_stat_card(3, "GPU Memory", "12 MB", COL_BLUE);
+            ui_stat_card(0, "Rectangles", "24", ds_theme->mauve);
+            ui_stat_card(1, "Glyphs", "156", ds_theme->green);
+            ui_stat_card(2, "Frame Time", "2.1ms", ds_theme->peach);
+            ui_stat_card(3, "GPU Memory", "12 MB", ds_theme->blue);
         }
 
         /* Bottom row: progress + scroll list */
@@ -254,19 +254,19 @@ static void ui_content(void)
                                                    .childGap = 14,
                                                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
                                                },
-                                               .backgroundColor = COL_SURFACE0,
+                                               .backgroundColor = ds_theme->surface0,
                                                .cornerRadius = CLAY_CORNER_RADIUS(10),
                                            })
             {
                 CLAY_TEXT(CLAY_STRING("System Resources"), {
-                                                               .textColor = COL_TEXT,
+                                                               .textColor = ds_theme->text,
                                                                .fontSize = 15,
                                                            });
-                ui_progress(0, "CPU Usage", 0.62f, COL_MAUVE);
-                ui_progress(1, "Memory", 0.45f, COL_GREEN);
-                ui_progress(2, "GPU Load", 0.78f, COL_PEACH);
-                ui_progress(3, "Disk I/O", 0.33f, COL_BLUE);
-                ui_progress(4, "Network", 0.55f, COL_TEAL);
+                ui_progress(0, "CPU Usage", 0.62f, ds_theme->mauve);
+                ui_progress(1, "Memory", 0.45f, ds_theme->green);
+                ui_progress(2, "GPU Load", 0.78f, ds_theme->peach);
+                ui_progress(3, "Disk I/O", 0.33f, ds_theme->blue);
+                ui_progress(4, "Network", 0.55f, ds_theme->teal);
             }
 
             /* Right: scrollable event log */
@@ -276,7 +276,7 @@ static void ui_content(void)
                                               .padding = { 16, 16, 16, 16 },
                                               .layoutDirection = CLAY_TOP_TO_BOTTOM,
                                           },
-                                          .backgroundColor = COL_SURFACE0,
+                                          .backgroundColor = ds_theme->surface0,
                                           .cornerRadius = CLAY_CORNER_RADIUS(10),
                                       })
             {
@@ -295,7 +295,7 @@ static void ui_build(void)
                                   .padding = { 16, 16, 16, 16 },
                                   .childGap = 16,
                               },
-                              .backgroundColor = COL_BASE,
+                              .backgroundColor = ds_theme->base,
                           })
     {
         ui_sidebar();
@@ -309,7 +309,7 @@ int main(int argc, char *argv[])
     (void)argc;
     (void)argv;
 
-    ClayGPUCtx ctx;
+    KilnUI ctx;
     static const char *font_candidates[] = {
         "assets/Inter-Regular.ttf",
         "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
@@ -317,14 +317,14 @@ int main(int argc, char *argv[])
         "/usr/share/fonts/opentype/noto/NotoSans-Regular.ttf",
         NULL
     };
-    const char *font = ClayGPUCtx_find_font(font_candidates);
+    const char *font = KilnUI_find_font(font_candidates);
     if (!font) {
         SDL_Log("No usable font found");
         return 1;
     }
     SDL_Log("Using font: %s", font);
-    if (!ClayGPUCtx_init(&ctx, "Kiln UI", 1280, 720, font, 16)) {
-        SDL_Log("Failed to initialize ClayGPUCtx");
+    if (!KilnUI_init(&ctx, "Kiln UI", 1280, 720, font, 16)) {
+        SDL_Log("Failed to initialize KilnUI");
         return 1;
     }
 
@@ -347,7 +347,7 @@ int main(int argc, char *argv[])
                     running = false;
                     break;
                 }
-                ClayGPUCtx_handle_event(&ctx, &e);
+                KilnUI_handle_event(&ctx, &e);
             }
         } else {
             /* Nothing to paint — block the thread until an event arrives.
@@ -364,7 +364,7 @@ int main(int argc, char *argv[])
                 running = false;
                 break;
             }
-            ClayGPUCtx_handle_event(&ctx, &e);
+            KilnUI_handle_event(&ctx, &e);
             /* Drain remaining events that may have queued up. */
             while (SDL_PollEvent(&e)) {
                 if (e.type == SDL_EVENT_QUIT) {
@@ -375,7 +375,7 @@ int main(int argc, char *argv[])
                     running = false;
                     break;
                 }
-                ClayGPUCtx_handle_event(&ctx, &e);
+                KilnUI_handle_event(&ctx, &e);
             }
         }
 
@@ -390,12 +390,12 @@ int main(int argc, char *argv[])
             Clay_BeginLayout();
             ui_build();
             Clay_RenderCommandArray cmds = Clay_EndLayout(dt);
-            ClayGPUCtx_render(&ctx, cmds);
+            KilnUI_render(&ctx, cmds);
 
             dirty = false; /* frame submitted; go idle until next event */
         }
     }
 
-    ClayGPUCtx_destroy(&ctx);
+    KilnUI_destroy(&ctx);
     return 0;
 }
