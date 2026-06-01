@@ -91,7 +91,7 @@ target_link_libraries(ui_components PUBLIC kilnui)
 
 # ---- Demo executable ----
 add_executable(clay_demo demo/main.c)
-target_link_libraries(clay_demo PRIVATE kilnui)
+target_link_libraries(clay_demo PRIVATE kilnui ui_components)
 add_dependencies(clay_demo shaders)
 
 # ---- Component gallery demo ----
