@@ -84,27 +84,45 @@ typedef enum {
  * Theme structure
  * ================================================================ */
 typedef struct {
-    /* Surfaces */
-    Clay_Color base;       /* app background           */
-    Clay_Color mantle;     /* sidebar / header         */
-    Clay_Color crust;      /* modal backdrop           */
-    Clay_Color surface0;   /* card / panel             */
-    Clay_Color surface1;   /* input / secondary card   */
-    Clay_Color surface2;   /* divider / border         */
-    Clay_Color overlay;    /* tooltip / popover        */
+    /* Standard Catppuccin Palette */
+    Clay_Color rosewater;
+    Clay_Color flamingo;
+    Clay_Color pink;
+    Clay_Color mauve;
+    Clay_Color red;
+    Clay_Color maroon;
+    Clay_Color peach;
+    Clay_Color yellow;
+    Clay_Color green;
+    Clay_Color teal;
+    Clay_Color sky;
+    Clay_Color sapphire;
+    Clay_Color blue;
+    Clay_Color lavender;
 
-    /* Text */
-    Clay_Color text;       /* primary text             */
-    Clay_Color subtext;    /* secondary / placeholder  */
-    Clay_Color muted;      /* disabled / hint          */
+    Clay_Color text;
+    Clay_Color subtext1;
+    Clay_Color subtext0;
+    Clay_Color overlay2;
+    Clay_Color overlay1;
+    Clay_Color overlay0;
+    Clay_Color surface2;
+    Clay_Color surface1;
+    Clay_Color surface0;
+    Clay_Color base;
+    Clay_Color mantle;
+    Clay_Color crust;
 
-    /* Semantic accent colors */
-    Clay_Color accent;     /* primary accent (mauve)   */
-    Clay_Color accent_alt; /* secondary (lavender)     */
-    Clay_Color success;    /* green                    */
-    Clay_Color warning;    /* yellow / peach           */
-    Clay_Color error;      /* red                      */
-    Clay_Color info;       /* blue / sapphire          */
+    /* Semantic Aliases */
+    Clay_Color overlay;    /* Legacy generic overlay (often translucent) */
+    Clay_Color subtext;    /* Primary subtext (maps to subtext0) */
+    Clay_Color muted;      /* Muted text (maps to overlay1 or overlay0) */
+    Clay_Color accent;     /* Primary accent (mauve) */
+    Clay_Color accent_alt; /* Secondary accent (lavender) */
+    Clay_Color success;    /* Success state (green) */
+    Clay_Color warning;    /* Warning state (yellow/peach) */
+    Clay_Color error;      /* Error state (red) */
+    Clay_Color info;       /* Info state (sapphire) */
 
     /* Semantic variant palette  [DS_VARIANT_COUNT] */
     Clay_Color variant_bg [DS_VARIANT_COUNT]; /* background fill   */
