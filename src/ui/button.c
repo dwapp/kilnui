@@ -2,6 +2,7 @@
 
 #include "button.h"
 #include "ui_internal.h"
+#include "../kilnui.h"
 
 #include "design_system.h"
 
@@ -99,6 +100,33 @@ bool UI_Button(int uid, const char *label,
     Clay_Color fg = get_btn_fg(variant, disabled);
 
     Clay_String lbl = UI__str(label);
+    static KilnUICustomShadow shadow_pool[1024];
+    static int shadow_pool_idx = 0;
+    
+    KilnUICustomShadow *shadow_data = &shadow_pool[(shadow_pool_idx++) % 1024];
+    shadow_data->type = KILNUI_CUSTOM_SHADOW;
+    shadow_data->offset_x = 0;
+    shadow_data->offset_y = 2;
+    shadow_data->blur_radius = 6;
+    shadow_data->spread = 0;
+    
+    static KilnUICustomBorder border_pool[1024];
+    static int border_pool_idx = 0;
+    KilnUICustomBorder *border_data = &border_pool[(border_pool_idx++) % 1024];
+    border_data->type = KILNUI_CUSTOM_BORDER;
+    border_data->width_top = border_data->width_right = border_data->width_bottom = border_data->width_left = 1.0f;
+    border_data->dash_length = 0;
+    border_data->dash_gap = 0;
+    
+    // Animate shadow on press/hover
+    if (pressed) {
+        shadow_data->offset_y = 0;
+        shadow_data->blur_radius = 2;
+        border_data->width_top = border_data->width_right = border_data->width_bottom = border_data->width_left = 2.0f;
+    } else if (hovered) {
+        shadow_data->offset_y = 4;
+        shadow_data->blur_radius = 12;
+    }
 
     CLAY(id, {
                  .layout = {
@@ -113,6 +141,35 @@ bool UI_Button(int uid, const char *label,
                  .cornerRadius = CLAY_CORNER_RADIUS((float)sz->radius),
              })
     {
+        if (!disabled && variant == UI_BTN_PRIMARY) {
+            Clay_Color shadow_color = bg; // use background color as tint
+            shadow_color.a = 100;         // make it semi-transparent
+            CLAY(CLAY_ID_LOCAL("shadow"), {
+                .floating = {
+                    .attachPoints = { .element = CLAY_ATTACH_POINT_CENTER_CENTER, .parent = CLAY_ATTACH_POINT_CENTER_CENTER },
+                    .zIndex = -1
+                },
+                .layout = { .sizing = { CLAY_SIZING_GROW(), CLAY_SIZING_GROW() } },
+                .custom = { .customData = shadow_data },
+                .backgroundColor = shadow_color,
+                .cornerRadius = CLAY_CORNER_RADIUS((float)sz->radius)
+            }) {}
+        }
+        
+        if (variant == UI_BTN_SECONDARY) {
+            Clay_Color border_color = ds_theme->surface2;
+            CLAY(CLAY_ID_LOCAL("border"), {
+                .floating = {
+                    .attachPoints = { .element = CLAY_ATTACH_POINT_CENTER_CENTER, .parent = CLAY_ATTACH_POINT_CENTER_CENTER },
+                    .zIndex = 1
+                },
+                .layout = { .sizing = { CLAY_SIZING_GROW(), CLAY_SIZING_GROW() } },
+                .custom = { .customData = border_data },
+                .backgroundColor = border_color,
+                .cornerRadius = CLAY_CORNER_RADIUS((float)sz->radius)
+            }) {}
+        }
+
         CLAY_TEXT(lbl, {
                            .textColor = fg,
                            .fontSize = (uint16_t)sz->fs,

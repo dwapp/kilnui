@@ -23,6 +23,15 @@ set(SHADER_SOURCES
     ${SHADER_DIR}/rect.frag.glsl
     ${SHADER_DIR}/tex.vert.glsl
     ${SHADER_DIR}/tex.frag.glsl
+    ${SHADER_DIR}/shadow.frag.glsl
+    ${SHADER_DIR}/border.frag.glsl
+    ${SHADER_DIR}/image_rounded.frag.glsl
+    ${SHADER_DIR}/gradient.frag.glsl
+    ${SHADER_DIR}/circle.frag.glsl
+    ${SHADER_DIR}/line.vert.glsl
+    ${SHADER_DIR}/line.frag.glsl
+    ${SHADER_DIR}/backdrop_blur.frag.glsl
+    ${SHADER_DIR}/scroll_shadow.frag.glsl
 )
 
 foreach(GLSL ${SHADER_SOURCES})

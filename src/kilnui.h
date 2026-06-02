@@ -30,6 +30,34 @@ typedef struct
     float r, g, b, a;
 } VertexTex;
 
+/* ---- Custom Shader Data ---- */
+typedef enum {
+    KILNUI_CUSTOM_SHADOW = 1,
+    KILNUI_CUSTOM_BORDER = 2,
+} KilnUICustomType;
+
+typedef struct {
+    KilnUICustomType type;
+} KilnUICustomHeader;
+
+typedef struct {
+    KilnUICustomType type;
+    float offset_x;
+    float offset_y;
+    float blur_radius;
+    float spread;
+} KilnUICustomShadow;
+
+typedef struct {
+    KilnUICustomType type;
+    float width_top;
+    float width_right;
+    float width_bottom;
+    float width_left;
+    float dash_length;
+    float dash_gap;
+} KilnUICustomBorder;
+
 /* ---- Capacity constants ---- */
 #define MAX_RECTS     8192
 #define MAX_TEXT_CMDS 64    /* max TEXT render commands per frame */
@@ -49,6 +77,8 @@ typedef struct
 
     SDL_GPUGraphicsPipeline *pipeline_rect;
     SDL_GPUGraphicsPipeline *pipeline_text;
+    SDL_GPUGraphicsPipeline *pipeline_shadow;
+    SDL_GPUGraphicsPipeline *pipeline_border;
     SDL_GPUSampler          *sampler_linear;
 
     /* Persistent GPU buffers — grown on demand, never shrunk mid-session.

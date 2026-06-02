@@ -157,6 +157,82 @@ static SDL_GPUGraphicsPipeline *create_text_pipeline(SDL_GPUDevice *dev, SDL_Win
     return p;
 }
 
+static SDL_GPUGraphicsPipeline *create_shadow_pipeline(SDL_GPUDevice *dev, SDL_Window *win)
+{
+    SDL_GPUShader *vert = load_spv(dev, "shaders/rect.vert.spv", SDL_GPU_SHADERSTAGE_VERTEX,   1, 0);
+    SDL_GPUShader *frag = load_spv(dev, "shaders/shadow.frag.spv", SDL_GPU_SHADERSTAGE_FRAGMENT, 1, 0);
+    if (!vert || !frag) {
+        if (vert) SDL_ReleaseGPUShader(dev, vert);
+        if (frag) SDL_ReleaseGPUShader(dev, frag);
+        return NULL;
+    }
+    SDL_GPUColorTargetDescription ctd = blend_desc(dev, win);
+    SDL_GPUGraphicsPipelineCreateInfo ci = {
+        .target_info        = { .num_color_targets = 1, .color_target_descriptions = &ctd },
+        .primitive_type     = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
+        .vertex_shader      = vert,
+        .fragment_shader    = frag,
+        .vertex_input_state = {
+            .num_vertex_buffers          = 1,
+            .vertex_buffer_descriptions  = (SDL_GPUVertexBufferDescription[]){ {
+                .slot       = 0,
+                .pitch      = sizeof(VertexRect),
+                .input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX,
+            } },
+            .num_vertex_attributes = 5,
+            .vertex_attributes     = (SDL_GPUVertexAttribute[]){
+                { .location = 0, .buffer_slot = 0, .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = offsetof(VertexRect, pos_x)     },
+                { .location = 1, .buffer_slot = 0, .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = offsetof(VertexRect, local_x)   },
+                { .location = 2, .buffer_slot = 0, .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = offsetof(VertexRect, size_w)    },
+                { .location = 3, .buffer_slot = 0, .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4, .offset = offsetof(VertexRect, radius_tl) },
+                { .location = 4, .buffer_slot = 0, .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4, .offset = offsetof(VertexRect, r)         },
+            },
+        },
+    };
+    SDL_GPUGraphicsPipeline *p = SDL_CreateGPUGraphicsPipeline(dev, &ci);
+    SDL_ReleaseGPUShader(dev, vert);
+    SDL_ReleaseGPUShader(dev, frag);
+    return p;
+}
+
+static SDL_GPUGraphicsPipeline *create_border_pipeline(SDL_GPUDevice *dev, SDL_Window *win)
+{
+    SDL_GPUShader *vert = load_spv(dev, "shaders/rect.vert.spv", SDL_GPU_SHADERSTAGE_VERTEX,   1, 0);
+    SDL_GPUShader *frag = load_spv(dev, "shaders/border.frag.spv", SDL_GPU_SHADERSTAGE_FRAGMENT, 1, 0);
+    if (!vert || !frag) {
+        if (vert) SDL_ReleaseGPUShader(dev, vert);
+        if (frag) SDL_ReleaseGPUShader(dev, frag);
+        return NULL;
+    }
+    SDL_GPUColorTargetDescription ctd = blend_desc(dev, win);
+    SDL_GPUGraphicsPipelineCreateInfo ci = {
+        .target_info        = { .num_color_targets = 1, .color_target_descriptions = &ctd },
+        .primitive_type     = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
+        .vertex_shader      = vert,
+        .fragment_shader    = frag,
+        .vertex_input_state = {
+            .num_vertex_buffers          = 1,
+            .vertex_buffer_descriptions  = (SDL_GPUVertexBufferDescription[]){ {
+                .slot       = 0,
+                .pitch      = sizeof(VertexRect),
+                .input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX,
+            } },
+            .num_vertex_attributes = 5,
+            .vertex_attributes     = (SDL_GPUVertexAttribute[]){
+                { .location = 0, .buffer_slot = 0, .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = offsetof(VertexRect, pos_x)     },
+                { .location = 1, .buffer_slot = 0, .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = offsetof(VertexRect, local_x)   },
+                { .location = 2, .buffer_slot = 0, .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, .offset = offsetof(VertexRect, size_w)    },
+                { .location = 3, .buffer_slot = 0, .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4, .offset = offsetof(VertexRect, radius_tl) },
+                { .location = 4, .buffer_slot = 0, .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4, .offset = offsetof(VertexRect, r)         },
+            },
+        },
+    };
+    SDL_GPUGraphicsPipeline *p = SDL_CreateGPUGraphicsPipeline(dev, &ci);
+    SDL_ReleaseGPUShader(dev, vert);
+    SDL_ReleaseGPUShader(dev, frag);
+    return p;
+}
+
 /* ---- Clay MeasureText callback ---- */
 /* Single global pointer: Clay's measure callback has no user-data path
  * that survives a context switch, so we store it here. Multi-window
@@ -339,7 +415,9 @@ bool KilnUI_init(KilnUI *ctx, const char *title,
 
     ctx->pipeline_rect = create_rect_pipeline(ctx->gpu, ctx->window);
     ctx->pipeline_text = create_text_pipeline(ctx->gpu, ctx->window);
-    if (!ctx->pipeline_rect || !ctx->pipeline_text) {
+    ctx->pipeline_shadow = create_shadow_pipeline(ctx->gpu, ctx->window);
+    ctx->pipeline_border = create_border_pipeline(ctx->gpu, ctx->window);
+    if (!ctx->pipeline_rect || !ctx->pipeline_text || !ctx->pipeline_shadow || !ctx->pipeline_border) {
         SDL_Log("Pipeline creation failed");
         return false;
     }
@@ -427,6 +505,8 @@ void KilnUI_destroy(KilnUI *ctx)
     if (ctx->staging_tbuf) SDL_ReleaseGPUTransferBuffer(ctx->gpu, ctx->staging_tbuf);
     if (ctx->pipeline_rect)  SDL_ReleaseGPUGraphicsPipeline(ctx->gpu, ctx->pipeline_rect);
     if (ctx->pipeline_text)  SDL_ReleaseGPUGraphicsPipeline(ctx->gpu, ctx->pipeline_text);
+    if (ctx->pipeline_shadow) SDL_ReleaseGPUGraphicsPipeline(ctx->gpu, ctx->pipeline_shadow);
+    if (ctx->pipeline_border) SDL_ReleaseGPUGraphicsPipeline(ctx->gpu, ctx->pipeline_border);
     if (ctx->sampler_linear) SDL_ReleaseGPUSampler(ctx->gpu, ctx->sampler_linear);
     if (ctx->font)           TTF_CloseFont(ctx->font);
     TTF_Quit();

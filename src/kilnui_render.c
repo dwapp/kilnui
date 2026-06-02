@@ -278,6 +278,22 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
                 s_vcache[ri].hash = hash;
                 s_vcache[ri].valid = true;
             }
+        } else if (cmd->commandType == CLAY_RENDER_COMMAND_TYPE_CUSTOM) {
+            KilnUICustomHeader *header = (KilnUICustomHeader *)cmd->renderData.custom.customData;
+            if (header && (header->type == KILNUI_CUSTOM_SHADOW || header->type == KILNUI_CUSTOM_BORDER)) {
+                int ri = s_rect_count++;
+                cmd_to_rect[i] = ri;
+                Clay_BoundingBox bb = cmd->boundingBox;
+                Clay_Color c = cmd->renderData.custom.backgroundColor;
+                Clay_CornerRadius cr = cmd->renderData.custom.cornerRadius;
+
+                uint32_t hash = hash_rect_cmd(bb, c, cr, scale) ^ header->type;
+                if (!s_vcache[ri].valid || s_vcache[ri].hash != hash) {
+                    push_rect_at(ri, bb.x, bb.y, bb.width, bb.height, c, cr, scale);
+                    s_vcache[ri].hash = hash;
+                    s_vcache[ri].valid = true;
+                }
+            }
         }
     }
 
@@ -445,6 +461,41 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
                         .sampler = ctx->sampler_linear }, 1);
                 SDL_DrawGPUIndexedPrimitives(rp, 6, 1,
                     idx_base + (Uint32)(q * 6), vtx_base, 0);
+            }
+            break;
+        }
+
+        case CLAY_RENDER_COMMAND_TYPE_CUSTOM: {
+            KilnUICustomHeader *header = (KilnUICustomHeader *)cmd->renderData.custom.customData;
+            if (!header) break;
+            if (header->type == KILNUI_CUSTOM_SHADOW || header->type == KILNUI_CUSTOM_BORDER) {
+                int ri = cmd_to_rect[i];
+                if (ri < 0 || !ctx->rect_vbuf) break;
+                
+                SDL_GPUGraphicsPipeline *target_pipe = (header->type == KILNUI_CUSTOM_SHADOW) ? ctx->pipeline_shadow : ctx->pipeline_border;
+                
+                if (active_pipe != target_pipe) {
+                    SDL_BindGPUGraphicsPipeline(rp, target_pipe);
+                    SDL_PushGPUVertexUniformData(cmdbuf, 0, &proj, sizeof(proj));
+                    SDL_BindGPUVertexBuffers(rp, 0, &(SDL_GPUBufferBinding){ .buffer = ctx->rect_vbuf }, 1);
+                    SDL_BindGPUIndexBuffer(rp, &(SDL_GPUBufferBinding){ .buffer = ctx->rect_ibuf }, SDL_GPU_INDEXELEMENTSIZE_16BIT);
+                    active_pipe = target_pipe;
+                }
+                
+                if (header->type == KILNUI_CUSTOM_SHADOW) {
+                    KilnUICustomShadow *sh = (KilnUICustomShadow *)header;
+                    float udata[4] = { sh->offset_x * scale, sh->offset_y * scale, sh->blur_radius * scale, sh->spread * scale };
+                    SDL_PushGPUFragmentUniformData(cmdbuf, 0, udata, sizeof(udata));
+                } else if (header->type == KILNUI_CUSTOM_BORDER) {
+                    KilnUICustomBorder *b = (KilnUICustomBorder *)header;
+                    float udata[8] = { 
+                        b->width_top * scale, b->width_right * scale, b->width_bottom * scale, b->width_left * scale,
+                        b->dash_length * scale, b->dash_gap * scale, 0.0f, 0.0f 
+                    };
+                    SDL_PushGPUFragmentUniformData(cmdbuf, 0, udata, sizeof(udata));
+                }
+                
+                SDL_DrawGPUIndexedPrimitives(rp, 6, 1, (Uint32)(ri * 6), 0, 0);
             }
             break;
         }
