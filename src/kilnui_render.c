@@ -60,10 +60,48 @@ static VertexRect s_rect_verts[MAX_RECTS * 4];
 static Uint16     s_rect_idx  [MAX_RECTS * 6];
 static int        s_rect_count;
 
-static void push_rect(float x, float y, float w, float h,
-                      Clay_Color c, Clay_CornerRadius cr, float scale)
+static uint32_t hash_combine(uint32_t h, uint32_t v) {
+    h ^= v;
+    h *= 16777619u;
+    return h;
+}
+
+static inline uint32_t float_bits(float f) {
+    uint32_t u;
+    memcpy(&u, &f, sizeof(u));
+    return u;
+}
+
+static uint32_t hash_rect_cmd(Clay_BoundingBox bb, Clay_Color c, Clay_CornerRadius cr, float scale) {
+    uint32_t h = 2166136261u;
+    h = hash_combine(h, float_bits(bb.x));
+    h = hash_combine(h, float_bits(bb.y));
+    h = hash_combine(h, float_bits(bb.width));
+    h = hash_combine(h, float_bits(bb.height));
+    h = hash_combine(h, float_bits(c.r));
+    h = hash_combine(h, float_bits(c.g));
+    h = hash_combine(h, float_bits(c.b));
+    h = hash_combine(h, float_bits(c.a));
+    h = hash_combine(h, float_bits(cr.topLeft));
+    h = hash_combine(h, float_bits(cr.topRight));
+    h = hash_combine(h, float_bits(cr.bottomLeft));
+    h = hash_combine(h, float_bits(cr.bottomRight));
+    h = hash_combine(h, float_bits(scale));
+    return h;
+}
+
+typedef struct {
+    uint32_t hash;
+    bool valid;
+} VertexCacheEntry;
+
+static VertexCacheEntry s_vcache[MAX_RECTS];
+static bool s_idx_initialized = false;
+
+static void push_rect_at(int ri, float x, float y, float w, float h,
+                         Clay_Color c, Clay_CornerRadius cr, float scale)
 {
-    if (s_rect_count >= MAX_RECTS) return;
+    if (ri >= MAX_RECTS) return;
     x *= scale; y *= scale; w *= scale; h *= scale;
 
     /* Premultiplied alpha */
@@ -76,14 +114,11 @@ static void push_rect(float x, float y, float w, float h,
     float rbl = fminf(cr.bottomLeft * scale, max_r);
     float rbr = fminf(cr.bottomRight* scale, max_r);
 
-    int vi = s_rect_count * 4, ii = s_rect_count * 6;
+    int vi = ri * 4;
     s_rect_verts[vi+0] = (VertexRect){ x,   y,   0, 0, w, h, rtl, rtr, rbl, rbr, nr, ng, nb, na };
     s_rect_verts[vi+1] = (VertexRect){ x+w, y,   w, 0, w, h, rtl, rtr, rbl, rbr, nr, ng, nb, na };
     s_rect_verts[vi+2] = (VertexRect){ x+w, y+h, w, h, w, h, rtl, rtr, rbl, rbr, nr, ng, nb, na };
     s_rect_verts[vi+3] = (VertexRect){ x,   y+h, 0, h, w, h, rtl, rtr, rbl, rbr, nr, ng, nb, na };
-    s_rect_idx[ii+0]=vi; s_rect_idx[ii+1]=vi+1; s_rect_idx[ii+2]=vi+2;
-    s_rect_idx[ii+3]=vi; s_rect_idx[ii+4]=vi+2; s_rect_idx[ii+5]=vi+3;
-    s_rect_count++;
 }
 
 /* Track last TTF font size to avoid redundant TTF_SetFontSize calls. */
@@ -219,16 +254,37 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
     int n = cmds.length < MAX_CMDS ? cmds.length : MAX_CMDS;
     for (int i = 0; i < n; i++) { cmd_to_rect[i] = -1; cmd_to_text[i] = -1; }
 
+    if (!s_idx_initialized) {
+        for (int i = 0; i < MAX_RECTS; i++) {
+            int vi = i * 4, ii = i * 6;
+            s_rect_idx[ii+0]=vi; s_rect_idx[ii+1]=vi+1; s_rect_idx[ii+2]=vi+2;
+            s_rect_idx[ii+3]=vi; s_rect_idx[ii+4]=vi+2; s_rect_idx[ii+5]=vi+3;
+        }
+        s_idx_initialized = true;
+    }
+
     s_rect_count = 0;
     for (int i = 0; i < n; i++) {
         Clay_RenderCommand *cmd = Clay_RenderCommandArray_Get(&cmds, i);
         if (cmd->commandType == CLAY_RENDER_COMMAND_TYPE_RECTANGLE) {
-            cmd_to_rect[i] = s_rect_count;
+            int ri = s_rect_count++;
+            cmd_to_rect[i] = ri;
             Clay_BoundingBox bb = cmd->boundingBox;
-            push_rect(bb.x, bb.y, bb.width, bb.height,
-                      cmd->renderData.rectangle.backgroundColor,
-                      cmd->renderData.rectangle.cornerRadius, scale);
+            Clay_Color c = cmd->renderData.rectangle.backgroundColor;
+            Clay_CornerRadius cr = cmd->renderData.rectangle.cornerRadius;
+
+            uint32_t hash = hash_rect_cmd(bb, c, cr, scale);
+            if (!s_vcache[ri].valid || s_vcache[ri].hash != hash) {
+                push_rect_at(ri, bb.x, bb.y, bb.width, bb.height, c, cr, scale);
+                s_vcache[ri].hash = hash;
+                s_vcache[ri].valid = true;
+            }
         }
+    }
+
+    for (int ri = s_rect_count; ri < MAX_RECTS; ri++) {
+        if (!s_vcache[ri].valid) break;
+        s_vcache[ri].valid = false;
     }
 
     static uint32_t text_vtx_off[MAX_TEXT_CMDS]; /* vertex element offset per batch */
@@ -348,7 +404,19 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
                     SDL_GPU_INDEXELEMENTSIZE_16BIT);
                 active_pipe = ctx->pipeline_rect;
             }
-            SDL_DrawGPUIndexedPrimitives(rp, 6, 1, (Uint32)(ri * 6), 0, 0);
+
+            int batch_count = 1;
+            while (i + 1 < n) {
+                Clay_RenderCommand *next_cmd = Clay_RenderCommandArray_Get(&cmds, i + 1);
+                if (next_cmd->commandType == CLAY_RENDER_COMMAND_TYPE_RECTANGLE) {
+                    batch_count++;
+                    i++;
+                } else {
+                    break;
+                }
+            }
+
+            SDL_DrawGPUIndexedPrimitives(rp, 6 * batch_count, 1, (Uint32)(ri * 6), 0, 0);
             break;
         }
 

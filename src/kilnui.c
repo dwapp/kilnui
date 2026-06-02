@@ -163,6 +163,67 @@ static SDL_GPUGraphicsPipeline *create_text_pipeline(SDL_GPUDevice *dev, SDL_Win
  * support would require a thread-local or a Clay API extension. */
 static KilnUI *g_measure_ctx = NULL;
 
+/* FNV-1a hash for string slices */
+static uint32_t hash_string(Clay_StringSlice str, int font_size, int letter_spacing, int line_height) {
+    uint32_t hash = 2166136261u;
+    for (int i = 0; i < str.length; i++) {
+        hash ^= (uint8_t)str.chars[i];
+        hash *= 16777619u;
+    }
+    hash ^= (uint32_t)font_size;
+    hash *= 16777619u;
+    hash ^= (uint32_t)letter_spacing;
+    hash *= 16777619u;
+    hash ^= (uint32_t)line_height;
+    hash *= 16777619u;
+    return hash;
+}
+
+/* 2-way set-associative measure cache to avoid hash collisions.
+ * Each slot has 2 entries; a collision in one way is evicted to the other.
+ * Also stores a text prefix for exact matching on rare hash collisions. */
+#define MEASURE_CACHE_SETS   512
+#define MEASURE_CACHE_WAYS     2
+#define MEASURE_CACHE_PREFIX  12
+
+typedef struct {
+    uint32_t hash;
+    uint16_t w, h;
+    uint16_t font_size;
+    uint8_t  prefix_len;
+    char     prefix[MEASURE_CACHE_PREFIX];
+} MeasureCacheEntry;
+
+typedef struct {
+    MeasureCacheEntry entries[MEASURE_CACHE_WAYS];
+} MeasureCacheSet;
+
+static MeasureCacheSet s_measure_cache[MEASURE_CACHE_SETS];
+
+static bool measure_entry_matches(const MeasureCacheEntry *e, uint32_t hash,
+                                  Clay_StringSlice text, int font_size)
+{
+    if (e->hash != hash || e->font_size != (uint16_t)font_size)
+        return false;
+    int plen = e->prefix_len;
+    if (plen > text.length) plen = text.length;
+    if (plen > MEASURE_CACHE_PREFIX) plen = MEASURE_CACHE_PREFIX;
+    return memcmp(e->prefix, text.chars, (size_t)plen) == 0;
+}
+
+static void measure_entry_store(MeasureCacheEntry *e, uint32_t hash,
+                                Clay_StringSlice text, int font_size,
+                                int w, int h)
+{
+    e->hash = hash;
+    e->font_size = (uint16_t)font_size;
+    e->w = (uint16_t)w;
+    e->h = (uint16_t)h;
+    int plen = text.length < MEASURE_CACHE_PREFIX ? text.length : MEASURE_CACHE_PREFIX;
+    memcpy(e->prefix, text.chars, (size_t)plen);
+    e->prefix_len = (uint8_t)plen;
+}
+
 static Clay_Dimensions measure_text_cb(Clay_StringSlice text,
                                        Clay_TextElementConfig *config,
                                        void *userData)
@@ -173,14 +234,38 @@ static Clay_Dimensions measure_text_cb(Clay_StringSlice text,
         return (Clay_Dimensions){ 0, 0 };
 
     int req_size = (config && config->fontSize > 0) ? config->fontSize : ctx->font_size;
+    int letter_spacing = config ? config->letterSpacing : 0;
+    int line_height = config ? config->lineHeight : 0;
+
+    uint32_t hash = hash_string(text, req_size, letter_spacing, line_height);
+    int set_idx = hash % MEASURE_CACHE_SETS;
+    MeasureCacheSet *set = &s_measure_cache[set_idx];
+
+    /* Check both ways for a hit */
+    for (int w = 0; w < MEASURE_CACHE_WAYS; w++) {
+        if (measure_entry_matches(&set->entries[w], hash, text, req_size)) {
+            int rw = set->entries[w].w, rh = set->entries[w].h;
+            if (letter_spacing && text.length > 1)
+                rw += letter_spacing * ((int)text.length - 1);
+            if (line_height > 0 && line_height > rh)
+                rh = line_height;
+            return (Clay_Dimensions){ (float)rw, (float)rh };
+        }
+    }
+
     TTF_SetFontSize(ctx->font, (float)req_size);
 
     int w = 0, h = 0;
     TTF_GetStringSize(ctx->font, text.chars, (size_t)text.length, &w, &h);
-    if (config->letterSpacing && text.length > 1)
-        w += config->letterSpacing * ((int)text.length - 1);
-    if (config->lineHeight > 0 && config->lineHeight > (uint16_t)h)
-        h = config->lineHeight;
+    if (letter_spacing && text.length > 1)
+        w += letter_spacing * ((int)text.length - 1);
+    if (line_height > 0 && line_height > (uint16_t)h)
+        h = line_height;
+
+    /* LRU: evict way 1, promote way 0 → way 1, insert new in way 0 */
+    set->entries[1] = set->entries[0];
+    measure_entry_store(&set->entries[0], hash, text, req_size, w, h);
+
     return (Clay_Dimensions){ (float)w, (float)h };
 }
 
