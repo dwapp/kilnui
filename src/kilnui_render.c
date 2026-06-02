@@ -158,7 +158,6 @@ static void build_text_batch(KilnUI *ctx, TextBatch *tb,
     if (phys_size < 1) phys_size = 1;
     set_font_size(ctx->font, phys_size);
 
-    int   font_ascent = TTF_GetFontAscent(ctx->font); /* physical px */
     float cx = bb.x * scale;                          /* logical → physical */
     float cy = bb.y * scale;
 
@@ -213,8 +212,8 @@ static void build_text_batch(KilnUI *ctx, TextBatch *tb,
                                               cp, (uint16_t)phys_size);
         if (!ge) { cx += phys_size * 0.5f; continue; } /* fallback advance */
 
-        float gx = cx + ge->bearing_x; /* bearing already in physical px */
-        float gy = cy + (font_ascent - ge->bearing_y);
+        float gx = cx;
+        float gy = cy;
         float gw = ge->w;              /* glyph size already in physical px */
         float gh = ge->h;
 

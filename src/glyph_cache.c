@@ -152,7 +152,7 @@ const GlyphEntry *GlyphCache_get(GlyphCache *gc, TTF_Font *font,
             SDL_UploadToGPUTexture(cp,
                 &(SDL_GPUTextureTransferInfo){
                     .transfer_buffer = tbuf, .offset = 0,
-                    .pixels_per_row  = (Uint32)rgba->w,
+                    .pixels_per_row  = (Uint32)(rgba->pitch / 4),
                     .rows_per_layer  = (Uint32)rgba->h,
                 },
                 &(SDL_GPUTextureRegion){
@@ -237,7 +237,7 @@ void GlyphCache_flush_uploads(GlyphCache *gc)
             &(SDL_GPUTextureTransferInfo){
                 .transfer_buffer = tbuf,
                 .offset          = offset,
-                .pixels_per_row  = (Uint32)s->w,
+                .pixels_per_row  = (Uint32)(s->pitch / 4),
                 .rows_per_layer  = (Uint32)s->h,
             },
             &(SDL_GPUTextureRegion){
