@@ -1,10 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
-project(kilnui C)
+project(kilnui VERSION 0.1.0 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# Optional warnings
+# ---- Options ----
+option(KILNUI_BUILD_DEMOS "Build demo executables" OFF)
+
+# ---- Compiler warnings ----
 add_compile_options(-Wall -Wextra -Wno-unused-parameter)
 
 # ---- Find dependencies ----
@@ -39,7 +42,6 @@ foreach(GLSL ${SHADER_SOURCES})
     string(REPLACE ".glsl" ".spv" SPV_NAME ${FNAME})
     set(SPV_OUT ${SHADER_OUT}/${SPV_NAME})
 
-    # Detect stage from filename
     if(FNAME MATCHES "\\.vert\\.")
         set(STAGE vert)
     else()
@@ -57,21 +59,25 @@ endforeach()
 
 add_custom_target(shaders ALL DEPENDS ${SPV_OUTPUTS})
 
-# ---- Library: kilnui ----
+# ---- Library: kilnui (core renderer) ----
 add_library(kilnui STATIC
     src/kilnui.c
     src/kilnui_render.c
     src/glyph_cache.c
 )
+add_library(kilnui::kilnui ALIAS kilnui)
+
 target_include_directories(kilnui PUBLIC
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/3rdparty/clay
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/3rdparty/clay>
+    $<INSTALL_INTERFACE:include/kilnui>
+    $<INSTALL_INTERFACE:include/kilnui/clay>
 )
+
 target_link_libraries(kilnui PUBLIC
     SDL3::SDL3
     SDL3_ttf::SDL3_ttf
 )
-# math library on Linux
 if(UNIX AND NOT APPLE)
     target_link_libraries(kilnui PUBLIC m)
 endif()
@@ -87,47 +93,122 @@ add_library(ui_components STATIC
     src/ui/dropdown.c
     src/ui/progress.c
     src/ui/tooltip.c
-    # Design system
     src/ui/design_system.c
     src/ui/typography.c
     src/ui/theme.c
 )
+add_library(kilnui::ui_components ALIAS ui_components)
+
 target_include_directories(ui_components PUBLIC
-    ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/3rdparty/clay
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/3rdparty/clay>
+    $<INSTALL_INTERFACE:include/kilnui>
+    $<INSTALL_INTERFACE:include/kilnui/clay>
 )
+
 target_link_libraries(ui_components PUBLIC kilnui)
 
-# ---- Demo executable ----
-add_executable(clay_demo demo/main.c)
-target_link_libraries(clay_demo PRIVATE kilnui ui_components)
-add_dependencies(clay_demo shaders)
+# ---- Install: libraries ----
+include(GNUInstallDirs)
 
-# ---- Component gallery demo ----
-add_executable(component_gallery demo/component_gallery.c)
-target_link_libraries(component_gallery PRIVATE kilnui ui_components)
-add_dependencies(component_gallery shaders)
+install(TARGETS kilnui ui_components
+    EXPORT kilnuiTargets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
 
-# ---- Design system demo ----
-add_executable(design_system_demo demo/design_system_demo.c)
-target_link_libraries(design_system_demo PRIVATE kilnui ui_components)
-add_dependencies(design_system_demo shaders)
+# ---- Install: public headers ----
+install(FILES
+    src/kilnui.h
+    src/glyph_cache.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/kilnui
+)
 
+install(FILES
+    src/ui/ui.h
+    src/ui/ui_internal.h
+    src/ui/button.h
+    src/ui/checkbox.h
+    src/ui/container.h
+    src/ui/design_system.h
+    src/ui/dropdown.h
+    src/ui/icons.h
+    src/ui/input.h
+    src/ui/progress.h
+    src/ui/radio.h
+    src/ui/slider.h
+    src/ui/theme.h
+    src/ui/tooltip.h
+    src/ui/typography.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/kilnui/ui
+)
 
-# Helper macro: copy shaders + assets next to any demo executable
-macro(copy_demo_assets TARGET)
-    add_custom_command(TARGET ${TARGET} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${SHADER_OUT} $<TARGET_FILE_DIR:${TARGET}>/shaders
-        COMMENT "Copying shaders -> ${TARGET}"
-    )
-    add_custom_command(TARGET ${TARGET} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:${TARGET}>/assets
-        COMMENT "Copying assets -> ${TARGET}"
-    )
-endmacro()
+# Install vendored clay.h
+install(FILES
+    3rdparty/clay/clay.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/kilnui/clay
+)
 
-copy_demo_assets(clay_demo)
-copy_demo_assets(component_gallery)
-copy_demo_assets(design_system_demo)
+# ---- Install: shaders (pre-compiled SPIR-V) ----
+install(FILES ${SPV_OUTPUTS}
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/kilnui/shaders
+)
+
+# ---- Install: assets ----
+install(DIRECTORY assets/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/kilnui/assets
+    FILES_MATCHING PATTERN "*.md"
+)
+
+# ---- Install: CMake package config ----
+include(CMakePackageConfigHelpers)
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/kilnuiConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+configure_package_config_file(
+    ${CMAKE_SOURCE_DIR}/cmake/kilnuiConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/kilnuiConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/kilnui
+)
+
+install(EXPORT kilnuiTargets
+    FILE kilnuiTargets.cmake
+    NAMESPACE kilnui::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/kilnui
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/kilnuiConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/kilnuiConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/kilnui
+)
+
+# ---- Install: pkg-config ----
+set(PKG_CONFIG_REQUIRES "sdl3 sdl3-ttf")
+configure_file(
+    ${CMAKE_SOURCE_DIR}/cmake/kilnui.pc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/kilnui.pc
+    @ONLY
+)
+
+set(PKG_CONFIG_REQUIRES_PRIVATE "kilnui")
+configure_file(
+    ${CMAKE_SOURCE_DIR}/cmake/ui_components.pc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/ui_components.pc
+    @ONLY
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/kilnui.pc
+    ${CMAKE_CURRENT_BINARY_DIR}/ui_components.pc
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
+)
+
+# ---- Demos (opt-in) ----
+if(KILNUI_BUILD_DEMOS)
+    add_subdirectory(demo)
+endif()

@@ -29,12 +29,31 @@ cmake -B build
 cmake --build build
 ```
 
-Run the demos:
+With demos:
 
 ```bash
-./build/clay_demo
-./build/component_gallery
-./build/design_system_demo
+cmake -B build -DKILNUI_BUILD_DEMOS=ON
+cmake --build build
+./build/demo/clay_demo
+```
+
+Install:
+
+```bash
+cmake --install build --prefix /usr/local
+```
+
+Use in your project (CMake):
+
+```cmake
+find_package(kilnui REQUIRED)
+target_link_libraries(myapp PRIVATE kilnui::ui_components)
+```
+
+Use in your project (pkg-config):
+
+```bash
+gcc main.c $(pkg-config --cflags --libs ui_components) -o myapp
 ```
 
 ## Project Structure

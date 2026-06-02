@@ -1,0 +1,12 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/include/kilnui
+
+Name: ui_components
+Description: Reusable widget library for kilnui
+URL: https://github.com/rewine/kilnui
+Version: @PROJECT_VERSION@
+Requires: @PKG_CONFIG_REQUIRES_PRIVATE@
+Cflags: -I${includedir} -I${includedir}/clay
+Libs: -L${libdir} -lui_components
