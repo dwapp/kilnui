@@ -76,4 +76,4 @@ KilnUI_destroy(&ctx);
 
 ## License
 
-See individual source files for licensing.
+[MIT](LICENSE)
