@@ -101,7 +101,7 @@ bool UI_Button(int uid, const char *label,
 
     Clay_String lbl = UI__str(label);
     static KilnUICustomShadow shadow_pool[1024];
-    static int shadow_pool_idx = 0;
+    static unsigned int shadow_pool_idx = 0;
     
     KilnUICustomShadow *shadow_data = &shadow_pool[(shadow_pool_idx++) % 1024];
     shadow_data->type = KILNUI_CUSTOM_SHADOW;
@@ -111,7 +111,7 @@ bool UI_Button(int uid, const char *label,
     shadow_data->spread = 0;
     
     static KilnUICustomBorder border_pool[1024];
-    static int border_pool_idx = 0;
+    static unsigned int border_pool_idx = 0;
     KilnUICustomBorder *border_data = &border_pool[(border_pool_idx++) % 1024];
     border_data->type = KILNUI_CUSTOM_BORDER;
     border_data->width_top = border_data->width_right = border_data->width_bottom = border_data->width_left = 1.0f;

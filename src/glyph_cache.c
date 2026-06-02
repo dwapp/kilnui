@@ -134,37 +134,15 @@ const GlyphEntry *GlyphCache_get(GlyphCache *gc, TTF_Font *font,
     }
 
     /* Stage upload — will be committed by GlyphCache_flush_uploads() */
-    if (gc->pending_count < MAX_PENDING_GLYPH_UPLOADS) {
-        gc->pending[gc->pending_count++] = (PendingGlyphUpload){ .surf = rgba, .tex = tex };
-    } else {
-        /* Pending list full: fall back to immediate upload (rare) */
-        SDL_Log("GlyphCache: pending list full, uploading immediately");
-        Uint32 byte_size = (Uint32)(rgba->pitch * rgba->h);
-        SDL_GPUTransferBuffer *tbuf = SDL_CreateGPUTransferBuffer(gc->gpu,
-            &(SDL_GPUTransferBufferCreateInfo){
-                .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = byte_size });
-        if (tbuf) {
-            void *mapped = SDL_MapGPUTransferBuffer(gc->gpu, tbuf, false);
-            SDL_memcpy(mapped, rgba->pixels, byte_size);
-            SDL_UnmapGPUTransferBuffer(gc->gpu, tbuf);
-            SDL_GPUCommandBuffer *cmd = SDL_AcquireGPUCommandBuffer(gc->gpu);
-            SDL_GPUCopyPass *cp = SDL_BeginGPUCopyPass(cmd);
-            SDL_UploadToGPUTexture(cp,
-                &(SDL_GPUTextureTransferInfo){
-                    .transfer_buffer = tbuf, .offset = 0,
-                    .pixels_per_row  = (Uint32)(rgba->pitch / 4),
-                    .rows_per_layer  = (Uint32)rgba->h,
-                },
-                &(SDL_GPUTextureRegion){
-                    .texture = tex,
-                    .w = (Uint32)rgba->w, .h = (Uint32)rgba->h, .d = 1,
-                }, false);
-            SDL_EndGPUCopyPass(cp);
-            SDL_SubmitGPUCommandBuffer(cmd);
-            SDL_ReleaseGPUTransferBuffer(gc->gpu, tbuf);
-        }
-        SDL_DestroySurface(rgba);
+    if (gc->pending_count >= MAX_PENDING_GLYPH_UPLOADS) {
+        /* Pending list full: flush existing uploads first, then stage this one.
+         * This avoids submitting an independent command buffer that could
+         * interleave with the main frame's render pass. */
+        SDL_Log("GlyphCache: pending list full (%d), flushing early",
+                MAX_PENDING_GLYPH_UPLOADS);
+        GlyphCache_flush_uploads(gc);
     }
+    gc->pending[gc->pending_count++] = (PendingGlyphUpload){ .surf = rgba, .tex = tex };
 
     /* Grow table if load factor > 0.75 */
     if ((gc->count + 1) * 4 > gc->capacity * 3) {

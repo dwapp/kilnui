@@ -251,6 +251,10 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
     static int cmd_to_text[MAX_CMDS]; /* text batch index, -1 if not TEXT */
 
     int n = cmds.length < MAX_CMDS ? cmds.length : MAX_CMDS;
+    if (cmds.length > MAX_CMDS) {
+        SDL_Log("KilnUI_render: command count %d exceeds MAX_CMDS %d, truncating",
+                cmds.length, MAX_CMDS);
+    }
     for (int i = 0; i < n; i++) { cmd_to_rect[i] = -1; cmd_to_text[i] = -1; }
 
     if (!s_idx_initialized) {
