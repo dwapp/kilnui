@@ -48,4 +48,11 @@ void UI_Avatar(int uid, const char *initials, DSVariant color_variant, int size)
 /* ---- Alert ---- */
 void UI_Alert(int uid, const char *message, DSVariant variant);
 
+/* ---- StatCard ---- */
+void UI_StatCard(int uid, const char *title, const char *value, Clay_Color accent);
+
+/* ---- ListItem ---- */
+/* Renders a simple list item with hover state. Returns true if clicked. */
+bool UI_ListItem(int uid, const char *text);
+
 #endif /* UI_THEME_H */

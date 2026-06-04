@@ -189,3 +189,53 @@ void UI_Alert(int uid, const char *message, DSVariant variant)
         CLAY_TEXT(UI__str(message), { .textColor = fg, .fontSize = 13 });
     }
 }
+
+/* ================================================================
+ * StatCard
+ * ================================================================ */
+void UI_StatCard(int uid, const char *title, const char *value, Clay_Color accent)
+{
+    Clay_ElementId eid = Clay_GetElementIdWithIndex(CLAY_STRING("UIStatCard"), uid);
+    bool hov = Clay_PointerOver(eid);
+
+    CLAY(eid, {
+        .layout = {
+            .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(90) },
+            .padding = { 16, 16, 14, 14 },
+            .childGap = 8,
+            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+        },
+        .backgroundColor = hov ? ds_theme->surface1 : ds_theme->surface0,
+        .cornerRadius = CLAY_CORNER_RADIUS(DS_RADIUS_MD),
+    }) {
+        CLAY_TEXT(UI__str(title), { .textColor = ds_theme->subtext, .fontSize = 13 });
+        CLAY_TEXT(UI__str(value), { .textColor = accent, .fontSize = 28 });
+    }
+}
+
+/* ================================================================
+ * ListItem
+ * ================================================================ */
+bool UI_ListItem(int uid, const char *text)
+{
+    Clay_ElementId eid = Clay_GetElementIdWithIndex(CLAY_STRING("UIListItem"), uid);
+    bool hov = Clay_PointerOver(eid);
+    bool clicked = hov && UI__mouse_released;
+
+    CLAY(eid, {
+        .layout = {
+            .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(28) },
+            .padding = { 8, 8, 4, 4 },
+            .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
+        },
+        .backgroundColor = hov ? ds_theme->overlay : (Clay_Color){0,0,0,0},
+        .cornerRadius = CLAY_CORNER_RADIUS(DS_RADIUS_SM),
+    }) {
+        CLAY_TEXT(UI__str(text), {
+            .textColor = hov ? ds_theme->text : ds_theme->subtext,
+            .fontSize = 13,
+        });
+    }
+    
+    return clicked;
+}

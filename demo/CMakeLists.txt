@@ -14,12 +14,6 @@ macro(copy_demo_assets TARGET)
     )
 endmacro()
 
-# ---- clay_demo ----
-add_executable(clay_demo main.c)
-target_link_libraries(clay_demo PRIVATE kilnui::ui_components)
-add_dependencies(clay_demo shaders)
-copy_demo_assets(clay_demo)
-
 # ---- component_gallery ----
 add_executable(component_gallery component_gallery.c)
 target_link_libraries(component_gallery PRIVATE kilnui::ui_components)

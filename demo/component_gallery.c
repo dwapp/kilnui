@@ -123,6 +123,47 @@ static void choice_panel(void)
     }
 }
 
+
+static void composite_panel(void)
+{
+    UI_Container(60, UI_CONTAINER_CARD) {
+        TY_Text(61, "Composite UI Patterns", TY_H3);
+        TY_Text(62, "Stat cards and scrollable lists", TY_BODY);
+
+        separator(63);
+
+        UI_ROW(64, 8) {
+            UI_StatCard(0, "Active Users", "1,240", ds_theme->mauve);
+            UI_StatCard(1, "Server Load", "42%", ds_theme->peach);
+        }
+        
+        UI_SPACER(8);
+        
+        CLAY(CLAY_ID("EventLogPanel"), {
+            .layout = {
+                .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(160) },
+                .padding = { 12, 12, 12, 12 },
+                .childGap = 4,
+                .layoutDirection = CLAY_TOP_TO_BOTTOM,
+            },
+            .backgroundColor = ds_theme->surface0,
+            .cornerRadius = CLAY_CORNER_RADIUS(DS_RADIUS_MD),
+            .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() },
+        }) {
+            const char *events[] = {
+                "System initialized", "Network connected", "Data synced",
+                "User logged in", "Settings updated", "Profile saved",
+                "Task completed", "Warning: High memory usage", "Error resolved",
+                "Backup created"
+            };
+            for (int i = 0; i < 10; i++) {
+                UI_ListItem(1000 + i, events[i]);
+            }
+        }
+
+    }
+}
+
 static void form_panel(void)
 {
     UI_Container(40, UI_CONTAINER_CARD) {
@@ -235,6 +276,7 @@ static void ui_build(void)
                     .layoutDirection = CLAY_TOP_TO_BOTTOM,
                 },
             }) {
+                composite_panel();
                 form_panel();
             }
         }
