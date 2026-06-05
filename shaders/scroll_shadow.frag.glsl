@@ -19,7 +19,10 @@ layout(set = 2, binding = 0) uniform ScrollShadowUniforms {
 
 float roundedBoxSDF(vec2 p, vec2 halfSize, float r) {
     vec2 q = abs(p) - halfSize + vec2(r);
-    return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
+    vec2 q_out = max(q, 0.0);
+    vec2 q2 = q_out * q_out;
+    float d_out = sqrt(sqrt(q2.x * q2.x + q2.y * q2.y)) - r;
+    return min(max(q.x, q.y), 0.0) + d_out;
 }
 
 void main() {
