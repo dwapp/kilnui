@@ -17,7 +17,7 @@ find_package(SDL3_ttf REQUIRED)
 # ---- Compile GLSL → SPIR-V ----
 find_program(GLSLC glslc REQUIRED)
 
-set(SHADER_DIR ${CMAKE_SOURCE_DIR}/shaders)
+set(SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/shaders)
 set(SHADER_OUT ${CMAKE_BINARY_DIR}/shaders)
 file(MAKE_DIRECTORY ${SHADER_OUT})
 
@@ -68,8 +68,8 @@ add_library(kilnui STATIC
 add_library(kilnui::kilnui ALIAS kilnui)
 
 target_include_directories(kilnui PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/3rdparty/clay>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/clay>
     $<INSTALL_INTERFACE:include/kilnui>
     $<INSTALL_INTERFACE:include/kilnui/clay>
 )
@@ -100,8 +100,8 @@ add_library(ui_components STATIC
 add_library(kilnui::ui_components ALIAS ui_components)
 
 target_include_directories(ui_components PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/3rdparty/clay>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/clay>
     $<INSTALL_INTERFACE:include/kilnui>
     $<INSTALL_INTERFACE:include/kilnui/clay>
 )
@@ -170,7 +170,7 @@ write_basic_package_version_file(
 )
 
 configure_package_config_file(
-    ${CMAKE_SOURCE_DIR}/cmake/kilnuiConfig.cmake.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/kilnuiConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/kilnuiConfig.cmake
     INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/kilnui
 )
@@ -190,14 +190,14 @@ install(FILES
 # ---- Install: pkg-config ----
 set(PKG_CONFIG_REQUIRES "sdl3 sdl3-ttf")
 configure_file(
-    ${CMAKE_SOURCE_DIR}/cmake/kilnui.pc.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/kilnui.pc.in
     ${CMAKE_CURRENT_BINARY_DIR}/kilnui.pc
     @ONLY
 )
 
 set(PKG_CONFIG_REQUIRES_PRIVATE "kilnui")
 configure_file(
-    ${CMAKE_SOURCE_DIR}/cmake/ui_components.pc.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/ui_components.pc.in
     ${CMAKE_CURRENT_BINARY_DIR}/ui_components.pc
     @ONLY
 )
