@@ -14,7 +14,7 @@ Clay layout → Clay_RenderCommandArray → KilnUI_render() → SDL3 GPU draw ca
 
 | File | Role |
 |------|------|
-| `src/kilnui.h` | Public API: `KilnUI_init`, `KilnUI_handle_event`, `KilnUI_render`, `KilnUI_destroy` |
+| `src/kilnui.h` | Public API: `KilnUI_init`, `KilnUI_handle_event`, `KilnUI_render`, `KilnUI_destroy`, `KilnUI_set_font_size` |
 | `src/kilnui.c` | Lifecycle: SDL/GPU/font/Clay init, event routing, teardown. Contains `CLAY_IMPLEMENTATION`. |
 | `src/kilnui_render.c` | Hot path: ortho projection, rect/text/shadow/border batching, single-pass GPU upload, render pass |
 | `src/glyph_cache.c/h` | Open-addressing hash table of per-glyph GPU textures. Deferred batch upload via `GlyphCache_flush_uploads()`. |
@@ -48,7 +48,7 @@ Global mouse state is set by the app via `UI_SetPointerState()` each frame.
 
 ## Build system
 
-CMake 3.20+, C23. Dependencies: SDL3, SDL3_ttf, glslc.
+CMake 3.20+, C23. Dependencies: SDL3, SDL3_ttf, glslc. Optional: fontconfig (Linux font discovery for fallback fonts).
 
 ```bash
 cmake -B build && cmake --build build
@@ -70,6 +70,7 @@ Shaders are compiled GLSL → SPIR-V and copied next to demo executables post-bu
 |------|-------|----------|
 | MAX_RECTS | 8192 | kilnui.h |
 | MAX_TEXT_CMDS | 64 | kilnui.h |
+| MAX_FALLBACK_FONTS | 8 | kilnui.h |
 | MAX_CMDS | 2048 | kilnui_render.c |
 | MAX_PENDING_GLYPH_UPLOADS | 512 | glyph_cache.h |
 | TextBatch max quads | 256 | kilnui_render.c (TextBatch struct) |

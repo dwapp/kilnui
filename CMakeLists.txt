@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(kilnui VERSION 0.1.0 LANGUAGES C)
 
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # ---- Options ----
@@ -10,6 +10,9 @@ option(KILNUI_BUILD_DEMOS "Build demo executables" OFF)
 # ---- Find dependencies ----
 find_package(SDL3 REQUIRED)
 find_package(SDL3_ttf REQUIRED)
+
+include(FindPkgConfig)
+pkg_check_modules(FONTCONFIG fontconfig)
 
 # ---- Compile GLSL → SPIR-V ----
 find_program(GLSLC glslc REQUIRED)
@@ -81,6 +84,11 @@ target_link_libraries(kilnui PUBLIC
 )
 if(UNIX AND NOT APPLE)
     target_link_libraries(kilnui PUBLIC m)
+endif()
+if(FONTCONFIG_FOUND)
+    target_include_directories(kilnui SYSTEM PUBLIC ${FONTCONFIG_INCLUDE_DIRS})
+    target_link_libraries(kilnui PUBLIC ${FONTCONFIG_LIBRARIES})
+    target_compile_definitions(kilnui PUBLIC KILNUI_HAS_FONTCONFIG=1)
 endif()
 
 # ---- Library: ui_components (reusable widgets) ----
@@ -194,6 +202,9 @@ install(FILES
 
 # ---- Install: pkg-config ----
 set(PKG_CONFIG_REQUIRES "sdl3 sdl3-ttf")
+if(FONTCONFIG_FOUND)
+    string(APPEND PKG_CONFIG_REQUIRES " fontconfig")
+endif()
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/kilnui.pc.in
     ${CMAKE_CURRENT_BINARY_DIR}/kilnui.pc

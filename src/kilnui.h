@@ -59,8 +59,9 @@ typedef struct {
 } KilnUICustomBorder;
 
 /* ---- Capacity constants ---- */
-#define MAX_RECTS     8192
-#define MAX_TEXT_CMDS 64    /* max TEXT render commands per frame */
+#define MAX_RECTS          8192
+#define MAX_TEXT_CMDS      64    /* max TEXT render commands per frame */
+#define MAX_FALLBACK_FONTS 8
 
 /* ---- Main context ---- */
 typedef struct
@@ -68,6 +69,8 @@ typedef struct
     SDL_Window    *window;
     SDL_GPUDevice *gpu;
     TTF_Font      *font;
+    TTF_Font      *fallback_fonts[MAX_FALLBACK_FONTS];
+    int            fallback_font_count;
     float          dpi_scale;   /* physical_px / logical_px (render scale) */
     float          mouse_scale; /* SDL logical mouse coords → Clay layout coords */
     bool           dirty;       /* true = re-render needed this frame */
@@ -115,6 +118,9 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds);
 
 /* Release all GPU and CPU resources. */
 void KilnUI_destroy(KilnUI *ctx);
+
+/* Helper to set the font size of both main and fallback fonts. */
+void KilnUI_set_font_size(KilnUI *ctx, float ptsize);
 
 /* Font discovery helper.
  * Tries each path in `candidates` (NULL-terminated) in order.

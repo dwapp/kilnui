@@ -13,7 +13,12 @@
 #define CLAY_IMPLEMENTATION
 #include "kilnui.h"
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
+
+#ifdef KILNUI_HAS_FONTCONFIG
+#include <fontconfig/fontconfig.h>
+#endif
 
 /* ---- Font discovery ---- */
 const char *KilnUI_find_font(const char **candidates)
@@ -25,6 +30,32 @@ const char *KilnUI_find_font(const char **candidates)
     }
     return NULL;
 }
+
+#ifdef KILNUI_HAS_FONTCONFIG
+/* Use fontconfig to find a font file by family name.
+ * Returns a static string owned by fontconfig (valid until FcFini). */
+static const char *fc_find_font(const char *family)
+{
+    FcPattern *pat = FcNameParse((const FcChar8 *)family);
+    if (!pat) return NULL;
+    FcConfigSubstitute(NULL, pat, FcMatchPattern);
+    FcDefaultSubstitute(pat);
+    FcResult result;
+    FcPattern *match = FcFontMatch(NULL, pat, &result);
+    FcPatternDestroy(pat);
+    if (!match) return NULL;
+    FcChar8 *file = NULL;
+    if (FcPatternGetString(match, FC_FILE, 0, &file) != FcResultMatch || !file) {
+        FcPatternDestroy(match);
+        return NULL;
+    }
+    /* file points into match; we need to copy it before destroying match */
+    static char s_fc_path[512];
+    snprintf(s_fc_path, sizeof(s_fc_path), "%s", (const char *)file);
+    FcPatternDestroy(match);
+    return s_fc_path;
+}
+#endif
 
 /* ---- Shader loading ---- */
 static SDL_GPUShader *load_spv(SDL_GPUDevice *dev, const char *path,
@@ -329,7 +360,7 @@ static Clay_Dimensions measure_text_cb(Clay_StringSlice text,
         }
     }
 
-    TTF_SetFontSize(ctx->font, (float)req_size);
+    KilnUI_set_font_size(ctx, (float)req_size);
 
     int w = 0, h = 0;
     TTF_GetStringSize(ctx->font, text.chars, (size_t)text.length, &w, &h);
@@ -410,6 +441,44 @@ bool KilnUI_init(KilnUI *ctx, const char *title,
     }
     ctx->font_size = font_size;
     TTF_SetFontKerning(ctx->font, true);
+
+    /* Load fallback fonts for icons/symbols if the primary font doesn't support them. */
+    static const char *fallback_families[] = {
+        "DejaVu Sans",
+        "Noto Sans Symbols",
+        "Noto Sans Symbols 2",
+        NULL
+    };
+    static const char *fallback_hardcoded[] = {
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansSymbols-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSansSymbols2-Regular.ttf",
+        NULL
+    };
+    ctx->fallback_font_count = 0;
+#ifdef KILNUI_HAS_FONTCONFIG
+    bool fc_ok = FcInit();
+#endif
+    for (int i = 0; fallback_families[i]; i++) {
+        const char *path = NULL;
+#ifdef KILNUI_HAS_FONTCONFIG
+        if (fc_ok) path = fc_find_font(fallback_families[i]);
+#endif
+        if (!path) path = fallback_hardcoded[i];
+        if (!path) continue;
+        TTF_Font *fallback = TTF_OpenFont(path, (float)font_size);
+        if (!fallback) continue;
+        if (TTF_AddFallbackFont(ctx->font, fallback)) {
+            if (ctx->fallback_font_count < MAX_FALLBACK_FONTS) {
+                ctx->fallback_fonts[ctx->fallback_font_count++] = fallback;
+            } else {
+                TTF_CloseFont(fallback);
+            }
+        } else {
+            SDL_Log("Failed to add fallback font %s: %s", path, SDL_GetError());
+            TTF_CloseFont(fallback);
+        }
+    }
 
     GlyphCache_init(&ctx->glyph_cache, 512, ctx->gpu);
 
@@ -509,6 +578,12 @@ void KilnUI_destroy(KilnUI *ctx)
     if (ctx->pipeline_border) SDL_ReleaseGPUGraphicsPipeline(ctx->gpu, ctx->pipeline_border);
     if (ctx->sampler_linear) SDL_ReleaseGPUSampler(ctx->gpu, ctx->sampler_linear);
     if (ctx->font)           TTF_CloseFont(ctx->font);
+    for (int i = 0; i < ctx->fallback_font_count; i++) {
+        if (ctx->fallback_fonts[i]) {
+            TTF_CloseFont(ctx->fallback_fonts[i]);
+        }
+    }
+    ctx->fallback_font_count = 0;
     TTF_Quit();
     if (ctx->gpu && ctx->window)
         SDL_ReleaseWindowFromGPUDevice(ctx->gpu, ctx->window);
@@ -516,4 +591,15 @@ void KilnUI_destroy(KilnUI *ctx)
     if (ctx->window)   SDL_DestroyWindow(ctx->window);
     if (ctx->clay_mem) SDL_free(ctx->clay_mem);
     SDL_Quit();
+}
+
+void KilnUI_set_font_size(KilnUI *ctx, float ptsize)
+{
+    if (!ctx || !ctx->font) return;
+    TTF_SetFontSize(ctx->font, ptsize);
+    for (int i = 0; i < ctx->fallback_font_count; i++) {
+        if (ctx->fallback_fonts[i]) {
+            TTF_SetFontSize(ctx->fallback_fonts[i], ptsize);
+        }
+    }
 }

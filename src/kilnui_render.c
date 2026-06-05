@@ -13,6 +13,7 @@
 
 #include "kilnui.h"
 #include <math.h>
+#include <string.h>
 
 /* ---- Orthographic projection (column-major, Y-down) ---- */
 typedef struct { float m[4][4]; } Mat4;
@@ -124,10 +125,10 @@ static void push_rect_at(int ri, float x, float y, float w, float h,
 /* Track last TTF font size to avoid redundant TTF_SetFontSize calls. */
 static int s_last_phys_size = 0;
 
-static void set_font_size(TTF_Font *font, int phys_size)
+static void set_font_size(KilnUI *ctx, int phys_size)
 {
     if (phys_size == s_last_phys_size) return;
-    TTF_SetFontSize(font, (float)phys_size);
+    KilnUI_set_font_size(ctx, (float)phys_size);
     s_last_phys_size = phys_size;
 }
 
@@ -156,7 +157,7 @@ static void build_text_batch(KilnUI *ctx, TextBatch *tb,
      * Glyph metrics (w, h, bearing, advance) are then already in physical px. */
     int phys_size = (int)((float)req_size * scale + 0.5f);
     if (phys_size < 1) phys_size = 1;
-    set_font_size(ctx->font, phys_size);
+    set_font_size(ctx, phys_size);
 
     float cx = bb.x * scale;                          /* logical → physical */
     float cy = bb.y * scale;
