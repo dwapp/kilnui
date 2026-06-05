@@ -1,7 +1,7 @@
 prefix=@CMAKE_INSTALL_PREFIX@
 exec_prefix=${prefix}
 libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
-includedir=${prefix}/include/kilnui
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@/kilnui
 
 Name: kilnui
 Description: Lightweight UI rendering library built on Clay and SDL3 GPU

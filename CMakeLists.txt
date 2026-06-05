@@ -1,14 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
 project(kilnui VERSION 0.1.0 LANGUAGES C)
 
-set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # ---- Options ----
 option(KILNUI_BUILD_DEMOS "Build demo executables" OFF)
-
-# ---- Compiler warnings ----
-add_compile_options(-Wall -Wextra -Wno-unused-parameter)
 
 # ---- Find dependencies ----
 find_package(SDL3 REQUIRED)
@@ -69,10 +66,14 @@ add_library(kilnui::kilnui ALIAS kilnui)
 
 target_include_directories(kilnui PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/clay>
     $<INSTALL_INTERFACE:include/kilnui>
     $<INSTALL_INTERFACE:include/kilnui/clay>
 )
+target_include_directories(kilnui SYSTEM PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/clay>
+)
+
+target_compile_options(kilnui PRIVATE -Wall -Wextra -Wno-unused-parameter)
 
 target_link_libraries(kilnui PUBLIC
     SDL3::SDL3
@@ -101,12 +102,16 @@ add_library(kilnui::ui_components ALIAS ui_components)
 
 target_include_directories(ui_components PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/clay>
     $<INSTALL_INTERFACE:include/kilnui>
     $<INSTALL_INTERFACE:include/kilnui/clay>
 )
+target_include_directories(ui_components SYSTEM PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/clay>
+)
 
 target_link_libraries(ui_components PUBLIC kilnui)
+
+target_compile_options(ui_components PRIVATE -Wall -Wextra -Wno-unused-parameter)
 
 # ---- Install: libraries ----
 include(GNUInstallDirs)
