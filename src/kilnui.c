@@ -498,6 +498,8 @@ bool KilnUI_init(KilnUI *ctx, const char *title,
         .address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
     });
 
+    Clay_SetMaxElementCount(16384);
+    Clay_SetMaxMeasureTextCacheWordCount(32768);
     uint32_t mem_size = Clay_MinMemorySize();
     ctx->clay_mem = SDL_malloc(mem_size);
     {

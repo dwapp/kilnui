@@ -91,6 +91,15 @@ void TY_Center(int uid, const char *text, TYStyle style)
 void TY_Truncate(int uid, const char *text, TYStyle style)
 {
     if (style < 0 || style >= TY_STYLE_COUNT) style = TY_BODY;
+    
+    Clay_String str = UI__str(text);
+    if (str.length > 256) {
+        int len = 256;
+        while (len > 0 && (str.chars[len - 1] & 0xC0) == 0x80) len--;
+        if (len > 0 && (str.chars[len - 1] & 0x80)) len--; 
+        str.length = len;
+    }
+
     CLAY(CLAY_SIDI(CLAY_STRING("TYTrunc"), uid), {
         .layout = {
             .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) },
@@ -98,7 +107,7 @@ void TY_Truncate(int uid, const char *text, TYStyle style)
         },
         .clip = { .horizontal = true },
     }) {
-        CLAY_TEXT(UI__str(text),
-                  { .textColor = TY_COL[style](), .fontSize = TY_FS[style] });
+        CLAY_TEXT(str,
+                  { .textColor = TY_COL[style](), .fontSize = TY_FS[style], .wrapMode = CLAY_TEXT_WRAP_NONE });
     }
 }
