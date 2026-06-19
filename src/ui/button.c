@@ -147,7 +147,8 @@ bool UI_Button(int uid, const char *label,
             CLAY(CLAY_ID_LOCAL("shadow"), {
                 .floating = {
                     .attachPoints = { .element = CLAY_ATTACH_POINT_CENTER_CENTER, .parent = CLAY_ATTACH_POINT_CENTER_CENTER },
-                    .zIndex = -1
+                    .zIndex = -1,
+                    .attachTo = CLAY_ATTACH_TO_PARENT
                 },
                 .layout = { .sizing = { CLAY_SIZING_GROW(), CLAY_SIZING_GROW() } },
                 .custom = { .customData = shadow_data },
@@ -161,7 +162,8 @@ bool UI_Button(int uid, const char *label,
             CLAY(CLAY_ID_LOCAL("border"), {
                 .floating = {
                     .attachPoints = { .element = CLAY_ATTACH_POINT_CENTER_CENTER, .parent = CLAY_ATTACH_POINT_CENTER_CENTER },
-                    .zIndex = 1
+                    .zIndex = 1,
+                    .attachTo = CLAY_ATTACH_TO_PARENT
                 },
                 .layout = { .sizing = { CLAY_SIZING_GROW(), CLAY_SIZING_GROW() } },
                 .custom = { .customData = border_data },
