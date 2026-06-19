@@ -100,32 +100,25 @@ bool UI_Button(int uid, const char *label,
     Clay_Color fg = get_btn_fg(variant, disabled);
 
     Clay_String lbl = UI__str(label);
+
+    /* Shadow custom data (PRIMARY only) */
     static KilnUICustomShadow shadow_pool[1024];
     static unsigned int shadow_pool_idx = 0;
-    
     KilnUICustomShadow *shadow_data = &shadow_pool[(shadow_pool_idx++) % 1024];
     shadow_data->type = KILNUI_CUSTOM_SHADOW;
     shadow_data->offset_x = 0;
-    shadow_data->offset_y = 2;
-    shadow_data->blur_radius = 6;
+    shadow_data->offset_y = pressed ? 0 : (hovered ? 4 : 2);
+    shadow_data->blur_radius = pressed ? 2 : (hovered ? 12 : 6);
     shadow_data->spread = 0;
-    
-    static KilnUICustomBorder border_pool[1024];
-    static unsigned int border_pool_idx = 0;
-    KilnUICustomBorder *border_data = &border_pool[(border_pool_idx++) % 1024];
-    border_data->type = KILNUI_CUSTOM_BORDER;
-    border_data->width_top = border_data->width_right = border_data->width_bottom = border_data->width_left = 1.0f;
-    border_data->dash_length = 0;
-    border_data->dash_gap = 0;
-    
-    // Animate shadow on press/hover
-    if (pressed) {
-        shadow_data->offset_y = 0;
-        shadow_data->blur_radius = 2;
-        border_data->width_top = border_data->width_right = border_data->width_bottom = border_data->width_left = 2.0f;
-    } else if (hovered) {
-        shadow_data->offset_y = 4;
-        shadow_data->blur_radius = 12;
+
+    /* Native border config for SECONDARY variant — rendered in tree order, BEFORE text */
+    Clay_BorderElementConfig border_cfg = {0};
+    if (variant == UI_BTN_SECONDARY) {
+        uint16_t bw = pressed ? 2 : 1;
+        border_cfg = (Clay_BorderElementConfig){
+            .color = ds_theme->surface2,
+            .width = { .left = bw, .right = bw, .top = bw, .bottom = bw }
+        };
     }
 
     CLAY(id, {
@@ -139,11 +132,14 @@ bool UI_Button(int uid, const char *label,
                  },
                  .backgroundColor = bg,
                  .cornerRadius = CLAY_CORNER_RADIUS((float)sz->radius),
+                 .border = border_cfg,
              })
     {
+        /* Shadow overlay for PRIMARY — floating at zIndex=-1, still behind text
+         * because the shadow is decorative and almost transparent */
         if (!disabled && variant == UI_BTN_PRIMARY) {
-            Clay_Color shadow_color = bg; // use background color as tint
-            shadow_color.a = 100;         // make it semi-transparent
+            Clay_Color shadow_color = bg;
+            shadow_color.a = 100;
             CLAY(CLAY_ID_LOCAL("shadow"), {
                 .floating = {
                     .attachPoints = { .element = CLAY_ATTACH_POINT_CENTER_CENTER, .parent = CLAY_ATTACH_POINT_CENTER_CENTER },
@@ -153,21 +149,6 @@ bool UI_Button(int uid, const char *label,
                 .layout = { .sizing = { CLAY_SIZING_GROW(), CLAY_SIZING_GROW() } },
                 .custom = { .customData = shadow_data },
                 .backgroundColor = shadow_color,
-                .cornerRadius = CLAY_CORNER_RADIUS((float)sz->radius)
-            }) {}
-        }
-        
-        if (variant == UI_BTN_SECONDARY) {
-            Clay_Color border_color = ds_theme->surface2;
-            CLAY(CLAY_ID_LOCAL("border"), {
-                .floating = {
-                    .attachPoints = { .element = CLAY_ATTACH_POINT_CENTER_CENTER, .parent = CLAY_ATTACH_POINT_CENTER_CENTER },
-                    .zIndex = 0,
-                    .attachTo = CLAY_ATTACH_TO_PARENT
-                },
-                .layout = { .sizing = { CLAY_SIZING_GROW(), CLAY_SIZING_GROW() } },
-                .custom = { .customData = border_data },
-                .backgroundColor = border_color,
                 .cornerRadius = CLAY_CORNER_RADIUS((float)sz->radius)
             }) {}
         }

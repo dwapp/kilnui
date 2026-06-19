@@ -299,6 +299,19 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
                     s_vcache[ri].valid = true;
                 }
             }
+        } else if (cmd->commandType == CLAY_RENDER_COMMAND_TYPE_BORDER) {
+            /* Native Clay border — no corner radius in render data, use zero */
+            int ri = s_rect_count++;
+            cmd_to_rect[i] = ri;
+            Clay_BoundingBox bb = cmd->boundingBox;
+            Clay_Color c = cmd->renderData.border.color;
+            Clay_CornerRadius cr = {0};
+            uint32_t hash = hash_rect_cmd(bb, c, cr, scale) ^ 0xBEEFu;
+            if (!s_vcache[ri].valid || s_vcache[ri].hash != hash) {
+                push_rect_at(ri, bb.x, bb.y, bb.width, bb.height, c, cr, scale);
+                s_vcache[ri].hash = hash;
+                s_vcache[ri].valid = true;
+            }
         }
     }
 
@@ -502,6 +515,33 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
                 
                 SDL_DrawGPUIndexedPrimitives(rp, 6, 1, (Uint32)(ri * 6), 0, 0);
             }
+            break;
+        }
+
+        case CLAY_RENDER_COMMAND_TYPE_BORDER: {
+            int ri = cmd_to_rect[i];
+            if (ri < 0 || !ctx->rect_vbuf) break;
+            if (active_pipe != ctx->pipeline_border) {
+                SDL_BindGPUGraphicsPipeline(rp, ctx->pipeline_border);
+                SDL_PushGPUVertexUniformData(cmdbuf, 0, &proj, sizeof(proj));
+                SDL_BindGPUVertexBuffers(rp, 0,
+                    &(SDL_GPUBufferBinding){ .buffer = ctx->rect_vbuf }, 1);
+                SDL_BindGPUIndexBuffer(rp,
+                    &(SDL_GPUBufferBinding){ .buffer = ctx->rect_ibuf },
+                    SDL_GPU_INDEXELEMENTSIZE_16BIT);
+                active_pipe = ctx->pipeline_border;
+            }
+            Clay_BorderRenderData *bd = &cmd->renderData.border;
+            /* uniform layout: top, right, bottom, left, dashLength, dashGap */
+            float udata[8] = {
+                (float)bd->width.top    * scale,
+                (float)bd->width.right  * scale,
+                (float)bd->width.bottom * scale,
+                (float)bd->width.left   * scale,
+                0.0f, 0.0f, 0.0f, 0.0f
+            };
+            SDL_PushGPUFragmentUniformData(cmdbuf, 0, udata, sizeof(udata));
+            SDL_DrawGPUIndexedPrimitives(rp, 6, 1, (Uint32)(ri * 6), 0, 0);
             break;
         }
 
