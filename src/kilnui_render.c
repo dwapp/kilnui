@@ -301,24 +301,18 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
             }
         } else if (cmd->commandType == CLAY_RENDER_COMMAND_TYPE_BORDER) {
             /* Native Clay border.
-             * Clay always emits RECTANGLE (background) then BORDER for the same
-             * element.  The BORDER render data does NOT carry cornerRadius, so we
-             * look back at the immediately preceding command: if it is a RECTANGLE
-             * with the same bounding box we borrow its cornerRadius so the border
-             * SDF renders with matching rounded corners. */
+             * TODO: Clay_BorderRenderData does not carry cornerRadius, so the
+             * border SDF always renders with sharp corners (cr={0}).  A look-back
+             * heuristic (check preceding RECTANGLE with same boundingBox) seemed
+             * to work but proved unreliable when elements have no background or
+             * when scissor/floating commands interleave between RECTANGLE and
+             * BORDER.  For now we draw a flat border and distinguish secondary
+             * buttons via background color rather than a visible border. */
             int ri = s_rect_count++;
             cmd_to_rect[i] = ri;
             Clay_BoundingBox bb = cmd->boundingBox;
             Clay_Color       c  = cmd->renderData.border.color;
             Clay_CornerRadius cr = {0};
-            if (i > 0) {
-                Clay_RenderCommand *prev = Clay_RenderCommandArray_Get(&cmds, i - 1);
-                if (prev->commandType == CLAY_RENDER_COMMAND_TYPE_RECTANGLE &&
-                    prev->boundingBox.x == bb.x && prev->boundingBox.y == bb.y &&
-                    prev->boundingBox.width == bb.width && prev->boundingBox.height == bb.height) {
-                    cr = prev->renderData.rectangle.cornerRadius;
-                }
-            }
             uint32_t hash = hash_rect_cmd(bb, c, cr, scale) ^ 0xBEEFu;
             if (!s_vcache[ri].valid || s_vcache[ri].hash != hash) {
                 push_rect_at(ri, bb.x, bb.y, bb.width, bb.height, c, cr, scale);

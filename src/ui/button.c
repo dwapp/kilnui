@@ -33,9 +33,13 @@ static Clay_Color get_btn_bg(UIBtnVariant variant, int state) {
         return ds_theme->accent; /* pressed */
     }
     if (variant == UI_BTN_SECONDARY) {
-        if (state == 0) return ds_theme->surface0;
-        if (state == 1) return ds_theme->surface1;
-        return ds_theme->base; /* pressed */
+        /* TODO: secondary should have a 1px rounded border, but
+         * CLAY_RENDER_COMMAND_TYPE_BORDER loses cornerRadius so the border
+         * renders with sharp corners.  Use a distinct background color instead
+         * until kilnui_render.c can properly pass cornerRadius to border SDF. */
+        if (state == 0) return ds_theme->surface2;
+        if (state == 1) return ds_theme->overlay0;
+        return ds_theme->surface1; /* pressed */
     }
     if (variant == UI_BTN_GHOST) {
         if (state == 0) return (Clay_Color){0,0,0,0};
@@ -111,15 +115,9 @@ bool UI_Button(int uid, const char *label,
     shadow_data->blur_radius = pressed ? 2 : (hovered ? 12 : 6);
     shadow_data->spread = 0;
 
-    /* Native border config for SECONDARY variant — rendered in tree order, BEFORE text */
-    Clay_BorderElementConfig border_cfg = {0};
-    if (variant == UI_BTN_SECONDARY) {
-        uint16_t bw = pressed ? 2 : 1;
-        border_cfg = (Clay_BorderElementConfig){
-            .color = ds_theme->surface2,
-            .width = { .left = bw, .right = bw, .top = bw, .bottom = bw }
-        };
-    }
+    /* TODO: secondary buttons should have a 1px rounded border —
+     * deferred until CLAY_RENDER_COMMAND_TYPE_BORDER correctly
+     * passes cornerRadius to the border SDF shader. */
 
     CLAY(id, {
                  .layout = {
@@ -132,7 +130,6 @@ bool UI_Button(int uid, const char *label,
                  },
                  .backgroundColor = bg,
                  .cornerRadius = CLAY_CORNER_RADIUS((float)sz->radius),
-                 .border = border_cfg,
              })
     {
         /* Shadow overlay for PRIMARY — floating at zIndex=-1, still behind text
