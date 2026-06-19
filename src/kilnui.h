@@ -60,7 +60,7 @@ typedef struct {
 
 /* ---- Capacity constants ---- */
 #define MAX_RECTS          8192
-#define MAX_TEXT_CMDS      64    /* max TEXT render commands per frame */
+#define MAX_TEXT_CMDS      2048  /* max TEXT render commands per frame */
 #define MAX_FALLBACK_FONTS 8
 
 /* ---- Main context ---- */

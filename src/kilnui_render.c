@@ -247,7 +247,7 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
     Mat4  proj  = ortho_proj((float)pw, (float)ph);
 
     /* ===== Phase 1: Collect geometry, map each cmd to its slot ===== */
-#define MAX_CMDS 2048
+#define MAX_CMDS 8192
     static int cmd_to_rect[MAX_CMDS]; /* rect slot index, -1 if not RECT */
     static int cmd_to_text[MAX_CMDS]; /* text batch index, -1 if not TEXT */
 

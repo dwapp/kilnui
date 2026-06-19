@@ -25,3 +25,9 @@ add_executable(design_system_demo design_system_demo.c)
 target_link_libraries(design_system_demo PRIVATE kilnui::ui_components)
 add_dependencies(design_system_demo shaders)
 copy_demo_assets(design_system_demo)
+
+# ---- font_demo ----
+add_executable(font_demo font_demo.c)
+target_link_libraries(font_demo PRIVATE kilnui::ui_components)
+add_dependencies(font_demo shaders)
+copy_demo_assets(font_demo)
