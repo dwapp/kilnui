@@ -12,12 +12,20 @@ bool  UI__mouse_released = false;
 float UI__mouse_x = 0.0f;
 float UI__mouse_y = 0.0f;
 
+/* ---- Text input window (set once by the app) ---- */
+SDL_Window *UI__text_input_window = NULL;
+
 void UI_SetPointerState(bool mouse_down, bool mouse_released, float mouse_x, float mouse_y)
 {
     UI__mouse_down = mouse_down;
     UI__mouse_released = mouse_released;
     UI__mouse_x = mouse_x;
     UI__mouse_y = mouse_y;
+}
+
+void UI_SetTextInputWindow(SDL_Window *win)
+{
+    UI__text_input_window = win;
 }
 
 static Clay_Color get_btn_bg(UIBtnVariant variant, int state) {

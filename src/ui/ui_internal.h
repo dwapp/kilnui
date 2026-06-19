@@ -14,6 +14,10 @@ extern bool  UI__mouse_released;
 extern float UI__mouse_x;
 extern float UI__mouse_y;
 
+/* Window pointer for SDL text input management (set once by the app). */
+extern struct SDL_Window *UI__text_input_window;
+void UI_SetTextInputWindow(struct SDL_Window *win);
+
 static inline Clay_String UI__str(const char *s)
 {
     return (Clay_String){ .chars = s ? s : "", .length = s ? (int32_t)SDL_strlen(s) : 0 };

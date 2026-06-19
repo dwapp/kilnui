@@ -31,3 +31,9 @@ add_executable(font_demo font_demo.c)
 target_link_libraries(font_demo PRIVATE kilnui::ui_components)
 add_dependencies(font_demo shaders)
 copy_demo_assets(font_demo)
+
+# ---- input_demo ----
+add_executable(input_demo input_demo.c)
+target_link_libraries(input_demo PRIVATE kilnui::ui_components)
+add_dependencies(input_demo shaders)
+copy_demo_assets(input_demo)

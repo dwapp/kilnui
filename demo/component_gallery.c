@@ -20,6 +20,10 @@
 #include <SDL3/SDL_main.h>
 #include <stdio.h>
 
+/* Debug logging */
+static int g_dbg_frame = 0;
+#define DBG(fmt, ...) fprintf(stderr, "[frame %d] " fmt "\n", g_dbg_frame, ##__VA_ARGS__)
+
 enum
 {
     ID_BTN_PRIMARY = 1,
@@ -45,6 +49,8 @@ static bool  g_notify = false;
 static int   g_mode = 0;
 static bool  g_input_name_focus = false;
 static bool  g_input_email_focus = false;
+static char  g_input_name_buf[128] = "";
+static char  g_input_email_buf[128] = "demo@kilnui.local";
 static float g_volume = 0.62f;
 static float g_progress = 0.38f;
 static bool  g_dropdown_open = false;
@@ -166,26 +172,43 @@ static void composite_panel(void)
 
 static void form_panel(void)
 {
+    DBG("form_panel: name_focus=%d email_focus=%d name_buf=\"%s\" email_buf=\"%s\"",
+        g_input_name_focus, g_input_email_focus, g_input_name_buf, g_input_email_buf);
     UI_Container(40, UI_CONTAINER_CARD) {
         TY_Text(41, "Form", TY_H3);
         TY_Text(42, "Input, dropdown, slider, progress, and tooltip", TY_BODY);
 
         separator(43);
 
-        UIInputResult name = UI_Input(ID_INPUT_NAME, "Name", "",
+        UIInputResult name = UI_Input(ID_INPUT_NAME, "Name", g_input_name_buf,
                                       "Click to focus name", g_input_name_focus, false);
+        DBG("UI_Input(name): clicked=%d focused=%d mouse_released=%d hovered_buf=\"%s\"",
+            name.clicked, name.focused, UI__mouse_released, g_input_name_buf);
         if (name.clicked) {
+            DBG(">>> Name input CLICKED, setting focus");
             g_input_name_focus = true;
             g_input_email_focus = false;
             snprintf(g_status, sizeof(g_status), "Name input focused");
         }
 
-        UIInputResult email = UI_Input(ID_INPUT_EMAIL, "Email", "demo@kilnui.local",
+        UIInputResult email = UI_Input(ID_INPUT_EMAIL, "Email", g_input_email_buf,
                                        "Email address", g_input_email_focus, false);
+        DBG("UI_Input(email): clicked=%d focused=%d", email.clicked, email.focused);
         if (email.clicked) {
+            DBG(">>> Email input CLICKED, setting focus");
             g_input_email_focus = true;
             g_input_name_focus = false;
             snprintf(g_status, sizeof(g_status), "Email input focused");
+        }
+
+        /* If a click happened but neither input was clicked, release focus */
+        if (UI__mouse_released && !name.clicked && !email.clicked &&
+            (g_input_name_focus || g_input_email_focus)) {
+            DBG(">>> Click OUTSIDE inputs, unfocusing");
+            g_input_name_focus = false;
+            g_input_email_focus = false;
+            UI_Input_ResetFocus();
+            snprintf(g_status, sizeof(g_status), "Input unfocused");
         }
 
         UIDropdownResult dd = UI_Dropdown(ID_DROPDOWN, "Density",
@@ -285,6 +308,14 @@ static void ui_build(void)
     }
 }
 
+/* Queued text input events — processed after ui_build() so focus state is current */
+#define MAX_TEXT_QUEUE 64
+typedef struct { char text[32]; } TextEvent;
+static TextEvent s_text_queue[MAX_TEXT_QUEUE];
+static int       s_text_queue_len = 0;
+
+static bool s_backspace_queued = false;
+
 static void handle_demo_event(const SDL_Event *e, bool *mouse_down,
                               bool *mouse_released, float *mouse_x, float *mouse_y)
 {
@@ -292,14 +323,74 @@ static void handle_demo_event(const SDL_Event *e, bool *mouse_down,
         *mouse_x = e->motion.x;
         *mouse_y = e->motion.y;
     } else if (e->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+        DBG("EVENT: MOUSE_BUTTON_DOWN at (%.0f, %.0f)", e->button.x, e->button.y);
         *mouse_down = true;
         *mouse_x = e->button.x;
         *mouse_y = e->button.y;
     } else if (e->type == SDL_EVENT_MOUSE_BUTTON_UP) {
+        DBG("EVENT: MOUSE_BUTTON_UP at (%.0f, %.0f)", e->button.x, e->button.y);
         *mouse_down = false;
         *mouse_released = true;
         *mouse_x = e->button.x;
         *mouse_y = e->button.y;
+    } else if (e->type == SDL_EVENT_TEXT_INPUT) {
+        DBG("EVENT: TEXT_INPUT text=\"%s\" (queueing, len=%d)", e->text.text, s_text_queue_len);
+        /* Queue for processing after ui_build updates focus */
+        if (s_text_queue_len < MAX_TEXT_QUEUE) {
+            snprintf(s_text_queue[s_text_queue_len].text, 32, "%s", e->text.text);
+            s_text_queue_len++;
+        }
+    } else if (e->type == SDL_EVENT_KEY_DOWN) {
+        DBG("EVENT: KEY_DOWN key=%d name=%s", e->key.key, SDL_GetKeyName(e->key.key));
+        if (e->key.key == SDLK_BACKSPACE) {
+            s_backspace_queued = true;
+        }
+    }
+}
+
+/* Process queued text input — call AFTER ui_build() */
+static void process_queued_text_input(void)
+{
+    if (s_text_queue_len > 0) {
+        DBG("process_queued_text_input: %d events, name_focus=%d email_focus=%d",
+            s_text_queue_len, g_input_name_focus, g_input_email_focus);
+    }
+
+    for (int i = 0; i < s_text_queue_len; i++) {
+        char *buf = NULL;
+        size_t bufsize = 0;
+        if (g_input_name_focus) {
+            buf = g_input_name_buf;
+            bufsize = sizeof(g_input_name_buf);
+        } else if (g_input_email_focus) {
+            buf = g_input_email_buf;
+            bufsize = sizeof(g_input_email_buf);
+        }
+        if (buf) {
+            size_t len = strlen(buf);
+            size_t add = strlen(s_text_queue[i].text);
+            if (len + add < bufsize - 1) {
+                memcpy(buf + len, s_text_queue[i].text, add + 1);
+                DBG("  -> Appended \"%s\", buf now \"%s\"", s_text_queue[i].text, buf);
+            }
+        } else {
+            DBG("  -> No input focused, ignoring \"%s\"", s_text_queue[i].text);
+        }
+    }
+    s_text_queue_len = 0;
+
+    if (s_backspace_queued) {
+        char *buf = NULL;
+        if (g_input_name_focus) buf = g_input_name_buf;
+        else if (g_input_email_focus) buf = g_input_email_buf;
+        if (buf) {
+            size_t len = strlen(buf);
+            if (len > 0) {
+                buf[len - 1] = '\0';
+                DBG("  -> Backspace, buf now \"%s\"", buf);
+            }
+        }
+        s_backspace_queued = false;
     }
 }
 
@@ -327,6 +418,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    /* Tell UI_Input which window to use for SDL text input */
+    UI_SetTextInputWindow(ctx.window);
+    DBG("Init: window=%p", (void*)ctx.window);
+
     bool running = true;
     bool dirty = true;
     bool mouse_down = false;
@@ -350,8 +445,17 @@ int main(int argc, char *argv[])
                 break;
             }
             if (e.type == SDL_EVENT_KEY_DOWN && e.key.key == SDLK_ESCAPE) {
-                running = false;
-                break;
+                /* If an input has focus, ESCAPE unfocuses it; otherwise quit */
+                if (g_input_name_focus || g_input_email_focus) {
+                    DBG("ESCAPE: unfocusing inputs");
+                    g_input_name_focus = false;
+                    g_input_email_focus = false;
+                    UI_Input_ResetFocus();
+                } else {
+                    DBG("ESCAPE: quitting");
+                    running = false;
+                    break;
+                }
             }
             handle_demo_event(&e, &mouse_down, &mouse_released, &mouse_x, &mouse_y);
             KilnUI_handle_event(&ctx, &e);
@@ -361,15 +465,22 @@ int main(int argc, char *argv[])
             break;
 
         if (dirty) {
+            g_dbg_frame++;
             Uint64 now = SDL_GetPerformanceCounter();
             float dt = (float)(now - last) / (float)SDL_GetPerformanceFrequency();
             last = now;
 
             UI_SetPointerState(mouse_down, mouse_released, mouse_x, mouse_y);
+            DBG("--- Frame %d start: mouse_down=%d mouse_released=%d ---",
+                g_dbg_frame, mouse_down, mouse_released);
 
             Clay_BeginLayout();
             ui_build();
             Clay_RenderCommandArray cmds = Clay_EndLayout(dt);
+
+            /* Process text input AFTER ui_build so focus state is current */
+            process_queued_text_input();
+
             KilnUI_render(&ctx, cmds);
 
             dirty = false; /* SDL_WaitEvent drives the next frame */
