@@ -12,7 +12,10 @@ layout(location = 3) in vec4  fragColor; // used as border color
 layout(location = 0) out vec4 outColor;
 
 layout(set = 3, binding = 0) uniform BorderUniforms {
-    vec4  widths;      // top, right, bottom, left
+    float top;
+    float right;
+    float bottom;
+    float left;
     float dashLength;
     float dashGap;
 } border;
@@ -38,10 +41,10 @@ void main() {
     
     // Inner SDF
     // To support independent widths, we compute the inner box parameters
-    float top = border.widths.x;
-    float right = border.widths.y;
-    float bottom = border.widths.z;
-    float left = border.widths.w;
+    float top = border.top;
+    float right = border.right;
+    float bottom = border.bottom;
+    float left = border.left;
     
     vec2 innerHalfSize = halfSize - vec2(left + right, top + bottom) * 0.5;
     vec2 innerCenterOffset = vec2(left - right, top - bottom) * 0.5;

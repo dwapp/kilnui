@@ -162,7 +162,7 @@ bool UI_Button(int uid, const char *label,
             CLAY(CLAY_ID_LOCAL("border"), {
                 .floating = {
                     .attachPoints = { .element = CLAY_ATTACH_POINT_CENTER_CENTER, .parent = CLAY_ATTACH_POINT_CENTER_CENTER },
-                    .zIndex = 1,
+                    .zIndex = 0,
                     .attachTo = CLAY_ATTACH_TO_PARENT
                 },
                 .layout = { .sizing = { CLAY_SIZING_GROW(), CLAY_SIZING_GROW() } },
