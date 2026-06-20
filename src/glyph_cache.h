@@ -79,9 +79,12 @@ bool GlyphCache_init(GlyphCache *gc, uint32_t initial_cap, SDL_GPUDevice *gpu);
 const GlyphEntry *GlyphCache_get(GlyphCache *gc, TTF_Font *font,
                                  uint32_t codepoint, uint16_t font_size);
 
-/* Upload all pending glyph surfaces to GPU in a single copy pass + submit.
- * Call this ONCE per frame, after building geometry but BEFORE the render pass. */
-void GlyphCache_flush_uploads(GlyphCache *gc);
+/* Upload all pending glyph surfaces to GPU in a single copy pass.
+ * Call this ONCE per frame, after building geometry but BEFORE the render pass.
+ * If cmdbuf is NULL, creates and submits its own command buffer (legacy path).
+ * If cmdbuf is provided, uses it for the copy pass (merged path - preferred). */
+void GlyphCache_flush_uploads_ex(GlyphCache *gc, SDL_GPUCommandBuffer *cmdbuf);
+static inline void GlyphCache_flush_uploads(GlyphCache *gc) { GlyphCache_flush_uploads_ex(gc, NULL); }
 
 /* Release all GPU textures and free the table. */
 void GlyphCache_destroy(GlyphCache *gc);

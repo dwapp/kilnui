@@ -202,8 +202,9 @@ static void ensure_staging_buffer(GlyphCache *gc, uint32_t needed)
     gc->staging_tbuf_cap = new_cap;
 }
 
-/* Upload all pending glyph surfaces in ONE transfer buffer + ONE copy pass. */
-void GlyphCache_flush_uploads(GlyphCache *gc)
+/* Upload all pending glyph surfaces in ONE transfer buffer + ONE copy pass.
+ * If cmdbuf is provided, uses it (merged path); otherwise creates its own. */
+void GlyphCache_flush_uploads_ex(GlyphCache *gc, SDL_GPUCommandBuffer *cmdbuf)
 {
     if (gc->pending_count == 0)
         return;
@@ -236,8 +237,18 @@ void GlyphCache_flush_uploads(GlyphCache *gc)
     }
     SDL_UnmapGPUTransferBuffer(gc->gpu, gc->staging_tbuf);
 
-    /* ONE command buffer, ONE copy pass for all pending glyphs */
-    SDL_GPUCommandBuffer *cmdbuf = SDL_AcquireGPUCommandBuffer(gc->gpu);
+    /* Use provided command buffer or create our own */
+    bool own_cmdbuf = (cmdbuf == NULL);
+    if (own_cmdbuf) {
+        cmdbuf = SDL_AcquireGPUCommandBuffer(gc->gpu);
+        if (!cmdbuf) {
+            for (int i = 0; i < gc->pending_count; i++)
+                SDL_DestroySurface(gc->pending[i].surf);
+            gc->pending_count = 0;
+            return;
+        }
+    }
+
     SDL_GPUCopyPass *cp = SDL_BeginGPUCopyPass(cmdbuf);
 
     offset = 0;
@@ -260,7 +271,11 @@ void GlyphCache_flush_uploads(GlyphCache *gc)
     }
 
     SDL_EndGPUCopyPass(cp);
-    SDL_SubmitGPUCommandBuffer(cmdbuf);
+
+    /* Only submit if we own the command buffer */
+    if (own_cmdbuf) {
+        SDL_SubmitGPUCommandBuffer(cmdbuf);
+    }
     gc->pending_count = 0;
 }
 

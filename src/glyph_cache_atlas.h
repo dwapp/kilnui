@@ -99,8 +99,11 @@ const GlyphAtlasEntry *GlyphAtlas_get(GlyphAtlas *ga, TTF_Font *font,
                                       uint32_t codepoint, uint16_t font_size);
 
 /* Upload all pending glyph surfaces to the atlas texture.
- * Call this ONCE per frame, before the render pass. */
-void GlyphAtlas_flush_uploads(GlyphAtlas *ga);
+ * Call this ONCE per frame, before the render pass.
+ * If cmdbuf is NULL, creates and submits its own command buffer (legacy path).
+ * If cmdbuf is provided, uses it for the copy pass (merged path - preferred). */
+void GlyphAtlas_flush_uploads_ex(GlyphAtlas *ga, SDL_GPUCommandBuffer *cmdbuf);
+static inline void GlyphAtlas_flush_uploads(GlyphAtlas *ga) { GlyphAtlas_flush_uploads_ex(ga, NULL); }
 
 /* Get the atlas texture (for binding in render pass) */
 SDL_GPUTexture *GlyphAtlas_get_texture(GlyphAtlas *ga);

@@ -267,8 +267,9 @@ static void ensure_staging_buffer(GlyphAtlas *ga, uint32_t needed)
     ga->staging_tbuf_cap = new_cap;
 }
 
-/* Upload all pending glyph surfaces to the atlas texture */
-void GlyphAtlas_flush_uploads(GlyphAtlas *ga)
+/* Upload all pending glyph surfaces to the atlas texture.
+ * If cmdbuf is provided, uses it (merged path); otherwise creates its own. */
+void GlyphAtlas_flush_uploads_ex(GlyphAtlas *ga, SDL_GPUCommandBuffer *cmdbuf)
 {
     if (ga->pending_count == 0)
         return;
@@ -301,8 +302,18 @@ void GlyphAtlas_flush_uploads(GlyphAtlas *ga)
     }
     SDL_UnmapGPUTransferBuffer(ga->gpu, ga->staging_tbuf);
 
-    /* ONE command buffer, ONE copy pass for all pending glyphs */
-    SDL_GPUCommandBuffer *cmdbuf = SDL_AcquireGPUCommandBuffer(ga->gpu);
+    /* Use provided command buffer or create our own */
+    bool own_cmdbuf = (cmdbuf == NULL);
+    if (own_cmdbuf) {
+        cmdbuf = SDL_AcquireGPUCommandBuffer(ga->gpu);
+        if (!cmdbuf) {
+            for (int i = 0; i < ga->pending_count; i++)
+                SDL_DestroySurface(ga->pending[i].surf);
+            ga->pending_count = 0;
+            return;
+        }
+    }
+
     SDL_GPUCopyPass *cp = SDL_BeginGPUCopyPass(cmdbuf);
 
     offset = 0;
@@ -331,7 +342,11 @@ void GlyphAtlas_flush_uploads(GlyphAtlas *ga)
     }
 
     SDL_EndGPUCopyPass(cp);
-    SDL_SubmitGPUCommandBuffer(cmdbuf);
+
+    /* Only submit if we own the command buffer */
+    if (own_cmdbuf) {
+        SDL_SubmitGPUCommandBuffer(cmdbuf);
+    }
     ga->pending_count = 0;
     ga->dirty = false;
 }

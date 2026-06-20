@@ -76,6 +76,7 @@ typedef struct
     float          mouse_scale; /* SDL logical mouse coords → Clay layout coords */
     bool           dirty;       /* true = re-render needed this frame */
     int            font_size;
+    float          cached_font_size;  /* cached font size to avoid redundant TTF_SetFontSize calls */
 
     GlyphCache glyph_cache;
     GlyphAtlas  glyph_atlas;  /* texture atlas for batched text rendering */

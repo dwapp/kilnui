@@ -440,6 +440,7 @@ bool KilnUI_init(KilnUI *ctx, const char *title,
         return false;
     }
     ctx->font_size = font_size;
+    ctx->cached_font_size = -1.0f;  /* initialize to invalid value so first call always sets */
     TTF_SetFontKerning(ctx->font, true);
 
     /* Load fallback fonts for icons/symbols if the primary font doesn't support them. */
@@ -600,6 +601,11 @@ void KilnUI_destroy(KilnUI *ctx)
 void KilnUI_set_font_size(KilnUI *ctx, float ptsize)
 {
     if (!ctx || !ctx->font) return;
+    /* Cache font size to avoid redundant TTF_SetFontSize calls.
+     * This is called from both measure_text_cb (layout phase) and
+     * build_text_batch (render phase), so caching here saves both paths. */
+    if (ctx->cached_font_size == ptsize) return;
+    ctx->cached_font_size = ptsize;
     TTF_SetFontSize(ctx->font, ptsize);
     for (int i = 0; i < ctx->fallback_font_count; i++) {
         if (ctx->fallback_fonts[i]) {

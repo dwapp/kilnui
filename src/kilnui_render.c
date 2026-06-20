@@ -373,11 +373,8 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
     }
 
     /* ===== Phase 2 + 3: single CommandBuffer — copy then render ===== */
-    /* Acquiring the swapchain texture first then doing copy + render in one
-     * submission halves the number of GPU round-trips vs two separate submits. */
-    GlyphCache_flush_uploads(&ctx->glyph_cache);
-    GlyphAtlas_flush_uploads(&ctx->glyph_atlas);
-
+    /* Acquire command buffer first, then merge all GPU uploads into it.
+     * This eliminates 2 extra GPU synchronization points per frame. */
     uint32_t rv_sz = (uint32_t)s_rect_count * 4 * sizeof(VertexRect);
     uint32_t ri_sz = (uint32_t)s_rect_count * 6 * sizeof(Uint16);
     uint32_t tv_sz = text_vtx_total * sizeof(VertexTex);
@@ -386,6 +383,10 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
 
     SDL_GPUCommandBuffer *cmdbuf = SDL_AcquireGPUCommandBuffer(ctx->gpu);
     if (!cmdbuf) return;
+
+    /* Flush glyph uploads using the same command buffer (merged path) */
+    GlyphCache_flush_uploads_ex(&ctx->glyph_cache, cmdbuf);
+    GlyphAtlas_flush_uploads_ex(&ctx->glyph_atlas, cmdbuf);
 
     if (total > 0) {
         ensure_gpu_buffer(ctx->gpu, &ctx->rect_vbuf, &ctx->rect_vbuf_cap,
