@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #version 450
 
 /* tex.frag — Textured quad fragment shader.

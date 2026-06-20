@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* demo/design_system_demo.c — KilnUI Design System Showcase
  *
  * Demonstrates all design system components:

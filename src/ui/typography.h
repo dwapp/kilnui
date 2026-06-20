@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/typography.h — KilnUI Typography System
  *
  * 10 text style presets + Label-Value pair component.

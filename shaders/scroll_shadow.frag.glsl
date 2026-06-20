@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #version 450
 
 /* scroll_shadow.frag.glsl — Scroll indicator shadow fragment shader.

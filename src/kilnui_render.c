@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* kilnui_render.c — KilnUI hot-path rendering.
  *
  * Responsibilities:

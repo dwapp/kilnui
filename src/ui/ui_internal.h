@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/ui_internal.h - Shared helpers for KilnUI widgets. */
 
 #ifndef UI_INTERNAL_H

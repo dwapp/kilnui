@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* glyph_cache_atlas.h — Texture atlas for glyph caching.
  *
  * Instead of one GPU texture per glyph, all glyphs are packed into a single

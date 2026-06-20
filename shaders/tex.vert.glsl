@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #version 450
 
 /* tex.vert — Textured quad vertex shader.

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #version 450
 
 /* gradient.frag.glsl — Gradient rounded-rectangle fragment shader.

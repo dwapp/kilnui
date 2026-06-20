@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #version 450
 
 /* shadow.frag.glsl — SDF drop shadow fragment shader.

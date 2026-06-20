@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/dropdown.h - Dropdown menu shell.
  *
  * The caller owns open/closed state. Toggle it when header_clicked is true,

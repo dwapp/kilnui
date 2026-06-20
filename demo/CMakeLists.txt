@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 # Demo executables — built only when KILNUI_BUILD_DEMOS=ON
 
 # Helper macro: copy shaders + assets next to a demo executable

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/button.h — Reusable Clay button component.
  *
  * Usage:

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #version 450
 
 /* rect.vert — Rounded-rectangle vertex shader.

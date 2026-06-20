@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #version 450
 
 /* line.vert.glsl — SDF Line vertex shader.

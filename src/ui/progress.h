@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/progress.h - Progress bar widget. */
 
 #ifndef UI_PROGRESS_H

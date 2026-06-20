@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/design_system.c — Theme data for KilnUI Design System */
 
 #include "design_system.h"

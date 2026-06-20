@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/tooltip.h - Inline tooltip bubble.
  *
  * KilnUI does not currently render Clay floating commands, so this tooltip is

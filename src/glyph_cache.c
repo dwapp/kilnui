@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* glyph_cache.c — Open-addressing hash table for per-glyph GPU textures.
  *
  * On cache miss, rasterizes the glyph with TTF_RenderGlyph_Blended,

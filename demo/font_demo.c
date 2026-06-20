@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* demo/font_demo.c - Simple demo to reproduce font rendering issues. */
 
 #include "../src/kilnui.h"

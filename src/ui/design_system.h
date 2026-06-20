@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/design_system.h — KilnUI Design System Tokens
  *
  * Provides spacing, corner radii, font sizes, component heights, shadow

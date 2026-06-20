@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* demo/input_demo.c — Minimal text input demo with debug logging.
  *
  * Build: cmake --build build --target input_demo

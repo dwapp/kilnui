@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/theme.h — KilnUI Theme Components
  *
  * Provides themed UI components that automatically adapt to ds_theme:

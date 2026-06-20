@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #version 450
 
 /* backdrop_blur.frag.glsl — Background blur fragment shader.

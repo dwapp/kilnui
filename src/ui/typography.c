@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/typography.c — Typography System implementation */
 
 #include "typography.h"

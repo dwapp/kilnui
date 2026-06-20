@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/checkbox.h - Checkbox widget. */
 
 #ifndef UI_CHECKBOX_H

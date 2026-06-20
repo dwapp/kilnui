@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* kilnui.h — Public API for the kilnui rendering backend.
  *
  * kilnui integrates the Clay layout library with SDL3's GPU API,

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* demo/component_gallery.c - KilnUI component gallery.
  *
  * Shows the reusable UI components together in one Clay + SDL3 GPU demo.

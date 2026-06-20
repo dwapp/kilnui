@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/container.h - Container macro for nested Clay content. */
 
 #ifndef UI_CONTAINER_H

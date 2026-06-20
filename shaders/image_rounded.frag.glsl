@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #version 450
 
 /* image_rounded.frag.glsl — Rounded image fragment shader.

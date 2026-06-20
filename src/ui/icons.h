@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/icons.h — KilnUI Icon System
  *
  * 120+ Unicode icons encoded as UTF-8 string literals.

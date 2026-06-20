@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/radio.h - Radio button widget. */
 
 #ifndef UI_RADIO_H

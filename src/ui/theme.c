@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/theme.c — Theme-aware component implementations */
 
 #include "theme.h"

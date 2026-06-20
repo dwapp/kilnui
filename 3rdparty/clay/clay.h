@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: Zlib */
 // VERSION: 0.14
 
 /*

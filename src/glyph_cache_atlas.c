@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* glyph_cache_atlas.c — Texture atlas for glyph caching.
  *
  * Uses shelf packing (Next Fit Decreasing Height) to pack all glyphs

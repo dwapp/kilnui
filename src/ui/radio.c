@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #include "radio.h"
 #include "ui_internal.h"
 #include "design_system.h"

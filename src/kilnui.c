@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* kilnui.c — KilnUI context lifecycle: init, event handling, destroy.
  *
  * This file owns everything that runs once (or rarely):

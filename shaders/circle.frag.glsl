@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #version 450
 
 /* circle.frag.glsl — SDF circle and ring fragment shader.

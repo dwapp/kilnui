@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #include "input.h"
 #include "ui_internal.h"
 #include "design_system.h"

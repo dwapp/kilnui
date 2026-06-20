@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/ui.h — KilnUI Unified Component Header
  *
  * Single include that pulls in all UI subsystems plus layout helpers.

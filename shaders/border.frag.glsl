@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #version 450
 
 /* border.frag.glsl — SDF rounded-rectangle border fragment shader.

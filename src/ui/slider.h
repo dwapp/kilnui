@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/slider.h - Horizontal slider widget. */
 
 #ifndef UI_SLIDER_H

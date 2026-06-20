@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* glyph_cache.h — Open-addressing hash table caching per-glyph GPU textures.
  *
  * Key:   { codepoint, font_size } packed into uint64_t

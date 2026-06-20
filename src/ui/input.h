@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 /* src/ui/input.h - Text input field shell.
  *
  * The widget draws focus/value/placeholder state and reports clicks.

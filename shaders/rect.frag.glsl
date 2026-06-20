@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: MIT */
 #version 450
 
 /* rect.frag — SDF rounded-rectangle fragment shader.
