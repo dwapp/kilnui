@@ -78,6 +78,10 @@ bool GlyphAtlas_init(GlyphAtlas *ga, SDL_GPUDevice *gpu)
     ga->pending_count = 0;
     ga->dirty         = false;
 
+    /* Initialize persistent staging buffer (will be grown as needed) */
+    ga->staging_tbuf     = NULL;
+    ga->staging_tbuf_cap = 0;
+
     return true;
 }
 
@@ -241,6 +245,28 @@ const GlyphAtlasEntry *GlyphAtlas_get(GlyphAtlas *ga, TTF_Font *font,
     return &ga->slots[idx];
 }
 
+/* Ensure the staging transfer buffer is at least `needed` bytes. */
+static void ensure_staging_buffer(GlyphAtlas *ga, uint32_t needed)
+{
+    if (ga->staging_tbuf_cap >= needed)
+        return;
+
+    if (ga->staging_tbuf)
+        SDL_ReleaseGPUTransferBuffer(ga->gpu, ga->staging_tbuf);
+
+    /* Grow with 1.5x headroom to amortize reallocation */
+    uint32_t new_cap = needed + needed / 2;
+    ga->staging_tbuf = SDL_CreateGPUTransferBuffer(ga->gpu,
+        &(SDL_GPUTransferBufferCreateInfo){
+            .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = new_cap });
+    if (!ga->staging_tbuf) {
+        SDL_Log("GlyphAtlas: staging buffer allocation failed: %s", SDL_GetError());
+        ga->staging_tbuf_cap = 0;
+        return;
+    }
+    ga->staging_tbuf_cap = new_cap;
+}
+
 /* Upload all pending glyph surfaces to the atlas texture */
 void GlyphAtlas_flush_uploads(GlyphAtlas *ga)
 {
@@ -254,11 +280,10 @@ void GlyphAtlas_flush_uploads(GlyphAtlas *ga)
         total += (Uint32)(s->pitch * s->h);
     }
 
-    SDL_GPUTransferBuffer *tbuf = SDL_CreateGPUTransferBuffer(ga->gpu,
-        &(SDL_GPUTransferBufferCreateInfo){
-            .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = total });
-    if (!tbuf) {
-        SDL_Log("GlyphAtlas_flush_uploads: CreateGPUTransferBuffer: %s", SDL_GetError());
+    /* Reuse persistent staging buffer (grow-only) */
+    ensure_staging_buffer(ga, total);
+    if (!ga->staging_tbuf) {
+        SDL_Log("GlyphAtlas_flush_uploads: no staging buffer");
         for (int i = 0; i < ga->pending_count; i++)
             SDL_DestroySurface(ga->pending[i].surf);
         ga->pending_count = 0;
@@ -266,7 +291,7 @@ void GlyphAtlas_flush_uploads(GlyphAtlas *ga)
     }
 
     /* Copy all glyph pixels into the staging buffer */
-    uint8_t *mapped = (uint8_t *)SDL_MapGPUTransferBuffer(ga->gpu, tbuf, false);
+    uint8_t *mapped = (uint8_t *)SDL_MapGPUTransferBuffer(ga->gpu, ga->staging_tbuf, false);
     Uint32 offset = 0;
     for (int i = 0; i < ga->pending_count; i++) {
         SDL_Surface *s = ga->pending[i].surf;
@@ -274,7 +299,7 @@ void GlyphAtlas_flush_uploads(GlyphAtlas *ga)
         SDL_memcpy(mapped + offset, s->pixels, sz);
         offset += sz;
     }
-    SDL_UnmapGPUTransferBuffer(ga->gpu, tbuf);
+    SDL_UnmapGPUTransferBuffer(ga->gpu, ga->staging_tbuf);
 
     /* ONE command buffer, ONE copy pass for all pending glyphs */
     SDL_GPUCommandBuffer *cmdbuf = SDL_AcquireGPUCommandBuffer(ga->gpu);
@@ -288,7 +313,7 @@ void GlyphAtlas_flush_uploads(GlyphAtlas *ga)
 
         SDL_UploadToGPUTexture(cp,
             &(SDL_GPUTextureTransferInfo){
-                .transfer_buffer = tbuf,
+                .transfer_buffer = ga->staging_tbuf,
                 .offset          = offset,
                 .pixels_per_row  = (Uint32)(s->pitch / 4),
                 .rows_per_layer  = (Uint32)s->h,
@@ -307,7 +332,6 @@ void GlyphAtlas_flush_uploads(GlyphAtlas *ga)
 
     SDL_EndGPUCopyPass(cp);
     SDL_SubmitGPUCommandBuffer(cmdbuf);
-    SDL_ReleaseGPUTransferBuffer(ga->gpu, tbuf);
     ga->pending_count = 0;
     ga->dirty = false;
 }
@@ -325,6 +349,12 @@ void GlyphAtlas_destroy(GlyphAtlas *ga)
     for (int i = 0; i < ga->pending_count; i++)
         SDL_DestroySurface(ga->pending[i].surf);
     ga->pending_count = 0;
+
+    /* Release persistent staging buffer */
+    if (ga->staging_tbuf)
+        SDL_ReleaseGPUTransferBuffer(ga->gpu, ga->staging_tbuf);
+    ga->staging_tbuf     = NULL;
+    ga->staging_tbuf_cap = 0;
 
     if (ga->atlas_tex)
         SDL_ReleaseGPUTexture(ga->gpu, ga->atlas_tex);

@@ -52,6 +52,10 @@ typedef struct
      * drained by GlyphCache_flush_uploads() before the render pass. */
     PendingGlyphUpload pending[MAX_PENDING_GLYPH_UPLOADS];
     int                pending_count;
+
+    /* Persistent transfer buffer (grow-only) to avoid per-frame allocation */
+    SDL_GPUTransferBuffer *staging_tbuf;
+    uint32_t               staging_tbuf_cap;
 } GlyphCache;
 
 /* Pack a codepoint + font_size into a single 64-bit key */

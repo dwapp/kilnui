@@ -80,6 +80,10 @@ typedef struct {
     /* Dirty flag: true if atlas was modified this frame */
     bool dirty;
 
+    /* Persistent staging buffer (grow-only) to avoid per-frame allocation */
+    SDL_GPUTransferBuffer *staging_tbuf;
+    uint32_t               staging_tbuf_cap;
+
     SDL_GPUDevice *gpu;
 } GlyphAtlas;
 

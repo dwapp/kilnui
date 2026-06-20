@@ -71,6 +71,11 @@ bool GlyphCache_init(GlyphCache *gc, uint32_t initial_cap, SDL_GPUDevice *gpu)
     gc->count         = 0;
     gc->gpu           = gpu;
     gc->pending_count = 0;
+
+    /* Initialize persistent staging buffer (will be grown as needed) */
+    gc->staging_tbuf     = NULL;
+    gc->staging_tbuf_cap = 0;
+
     return gc->slots != NULL;
 }
 
@@ -175,6 +180,28 @@ const GlyphEntry *GlyphCache_get(GlyphCache *gc, TTF_Font *font,
     return &gc->slots[idx];
 }
 
+/* Ensure the staging transfer buffer is at least `needed` bytes. */
+static void ensure_staging_buffer(GlyphCache *gc, uint32_t needed)
+{
+    if (gc->staging_tbuf_cap >= needed)
+        return;
+
+    if (gc->staging_tbuf)
+        SDL_ReleaseGPUTransferBuffer(gc->gpu, gc->staging_tbuf);
+
+    /* Grow with 1.5x headroom to amortize reallocation */
+    uint32_t new_cap = needed + needed / 2;
+    gc->staging_tbuf = SDL_CreateGPUTransferBuffer(gc->gpu,
+        &(SDL_GPUTransferBufferCreateInfo){
+            .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = new_cap });
+    if (!gc->staging_tbuf) {
+        SDL_Log("GlyphCache: staging buffer allocation failed: %s", SDL_GetError());
+        gc->staging_tbuf_cap = 0;
+        return;
+    }
+    gc->staging_tbuf_cap = new_cap;
+}
+
 /* Upload all pending glyph surfaces in ONE transfer buffer + ONE copy pass. */
 void GlyphCache_flush_uploads(GlyphCache *gc)
 {
@@ -188,11 +215,10 @@ void GlyphCache_flush_uploads(GlyphCache *gc)
         total += (Uint32)(s->pitch * s->h);
     }
 
-    SDL_GPUTransferBuffer *tbuf = SDL_CreateGPUTransferBuffer(gc->gpu,
-        &(SDL_GPUTransferBufferCreateInfo){
-            .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = total });
-    if (!tbuf) {
-        SDL_Log("GlyphCache_flush_uploads: CreateGPUTransferBuffer: %s", SDL_GetError());
+    /* Reuse persistent staging buffer (grow-only) */
+    ensure_staging_buffer(gc, total);
+    if (!gc->staging_tbuf) {
+        SDL_Log("GlyphCache_flush_uploads: no staging buffer");
         for (int i = 0; i < gc->pending_count; i++)
             SDL_DestroySurface(gc->pending[i].surf);
         gc->pending_count = 0;
@@ -200,7 +226,7 @@ void GlyphCache_flush_uploads(GlyphCache *gc)
     }
 
     /* Copy all glyph pixels into the staging buffer */
-    uint8_t *mapped = (uint8_t *)SDL_MapGPUTransferBuffer(gc->gpu, tbuf, false);
+    uint8_t *mapped = (uint8_t *)SDL_MapGPUTransferBuffer(gc->gpu, gc->staging_tbuf, false);
     Uint32 offset = 0;
     for (int i = 0; i < gc->pending_count; i++) {
         SDL_Surface *s = gc->pending[i].surf;
@@ -208,7 +234,7 @@ void GlyphCache_flush_uploads(GlyphCache *gc)
         SDL_memcpy(mapped + offset, s->pixels, sz);
         offset += sz;
     }
-    SDL_UnmapGPUTransferBuffer(gc->gpu, tbuf);
+    SDL_UnmapGPUTransferBuffer(gc->gpu, gc->staging_tbuf);
 
     /* ONE command buffer, ONE copy pass for all pending glyphs */
     SDL_GPUCommandBuffer *cmdbuf = SDL_AcquireGPUCommandBuffer(gc->gpu);
@@ -220,7 +246,7 @@ void GlyphCache_flush_uploads(GlyphCache *gc)
         SDL_GPUTexture *t = gc->pending[i].tex;
         SDL_UploadToGPUTexture(cp,
             &(SDL_GPUTextureTransferInfo){
-                .transfer_buffer = tbuf,
+                .transfer_buffer = gc->staging_tbuf,
                 .offset          = offset,
                 .pixels_per_row  = (Uint32)(s->pitch / 4),
                 .rows_per_layer  = (Uint32)s->h,
@@ -235,7 +261,6 @@ void GlyphCache_flush_uploads(GlyphCache *gc)
 
     SDL_EndGPUCopyPass(cp);
     SDL_SubmitGPUCommandBuffer(cmdbuf);
-    SDL_ReleaseGPUTransferBuffer(gc->gpu, tbuf);
     gc->pending_count = 0;
 }
 
@@ -246,6 +271,12 @@ void GlyphCache_destroy(GlyphCache *gc)
     for (int i = 0; i < gc->pending_count; i++)
         SDL_DestroySurface(gc->pending[i].surf);
     gc->pending_count = 0;
+
+    /* Release persistent staging buffer */
+    if (gc->staging_tbuf)
+        SDL_ReleaseGPUTransferBuffer(gc->gpu, gc->staging_tbuf);
+    gc->staging_tbuf     = NULL;
+    gc->staging_tbuf_cap = 0;
 
     if (!gc->slots)
         return;
