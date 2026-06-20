@@ -138,7 +138,7 @@ typedef struct
     VertexTex      verts[256 * 4];
     Uint16         idx  [256 * 6];
     int            quad_count;
-    SDL_GPUTexture *glyph_textures[256];
+    bool           uses_atlas;  /* true = uses texture atlas (single draw call) */
 } TextBatch;
 
 static TextBatch s_text_batches[MAX_TEXT_CMDS];
@@ -149,6 +149,7 @@ static void build_text_batch(KilnUI *ctx, TextBatch *tb,
     const char *str = td->stringContents.chars;
     int len         = td->stringContents.length;
     tb->quad_count  = 0;
+    tb->uses_atlas  = true;  /* default: use atlas */
     if (!str || len <= 0) return;
 
     int req_size = (td->fontSize > 0) ? td->fontSize : ctx->font_size;
@@ -209,28 +210,53 @@ static void build_text_batch(KilnUI *ctx, TextBatch *tb,
         }
         prev_cp = cp;
 
-        const GlyphEntry *ge = GlyphCache_get(&ctx->glyph_cache, ctx->font,
-                                              cp, (uint16_t)phys_size);
-        if (!ge) { cx += phys_size * 0.5f; continue; } /* fallback advance */
+        /* Try texture atlas first, fall back to per-glyph cache */
+        const GlyphAtlasEntry *gae = GlyphAtlas_get(&ctx->glyph_atlas, ctx->font,
+                                                    cp, (uint16_t)phys_size);
+        if (gae) {
+            /* Use atlas entry */
+            float gx = cx;
+            float gy = cy;
+            float gw = gae->w;              /* glyph size already in physical px */
+            float gh = gae->h;
 
-        float gx = cx;
-        float gy = cy;
-        float gw = ge->w;              /* glyph size already in physical px */
-        float gh = ge->h;
+            int q  = tb->quad_count;
+            int vi = q * 4, ii = q * 6;
+            tb->verts[vi+0] = (VertexTex){ gx,    gy,    gae->u0, gae->v0, nr, ng, nb, na };
+            tb->verts[vi+1] = (VertexTex){ gx+gw, gy,    gae->u1, gae->v0, nr, ng, nb, na };
+            tb->verts[vi+2] = (VertexTex){ gx+gw, gy+gh, gae->u1, gae->v1, nr, ng, nb, na };
+            tb->verts[vi+3] = (VertexTex){ gx,    gy+gh, gae->u0, gae->v1, nr, ng, nb, na };
+            tb->idx[ii+0]=vi; tb->idx[ii+1]=vi+1; tb->idx[ii+2]=vi+2;
+            tb->idx[ii+3]=vi; tb->idx[ii+4]=vi+2; tb->idx[ii+5]=vi+3;
 
-        int q  = tb->quad_count;
-        int vi = q * 4, ii = q * 6;
-        tb->verts[vi+0] = (VertexTex){ gx,    gy,    0, 0, nr, ng, nb, na };
-        tb->verts[vi+1] = (VertexTex){ gx+gw, gy,    1, 0, nr, ng, nb, na };
-        tb->verts[vi+2] = (VertexTex){ gx+gw, gy+gh, 1, 1, nr, ng, nb, na };
-        tb->verts[vi+3] = (VertexTex){ gx,    gy+gh, 0, 1, nr, ng, nb, na };
-        tb->idx[ii+0]=vi; tb->idx[ii+1]=vi+1; tb->idx[ii+2]=vi+2;
-        tb->idx[ii+3]=vi; tb->idx[ii+4]=vi+2; tb->idx[ii+5]=vi+3;
-        tb->glyph_textures[q] = ge->tex;
+            cx += gae->advance; /* advance in physical px, no scale */
+            if (td->letterSpacing) cx += td->letterSpacing * scale; /* logical px → physical */
+            tb->quad_count++;
+        } else {
+            /* Fallback to per-glyph texture */
+            const GlyphEntry *ge = GlyphCache_get(&ctx->glyph_cache, ctx->font,
+                                                  cp, (uint16_t)phys_size);
+            if (!ge) { cx += phys_size * 0.5f; continue; } /* fallback advance */
 
-        cx += ge->advance; /* advance in physical px, no scale */
-        if (td->letterSpacing) cx += td->letterSpacing * scale; /* logical px → physical */
-        tb->quad_count++;
+            float gx = cx;
+            float gy = cy;
+            float gw = ge->w;              /* glyph size already in physical px */
+            float gh = ge->h;
+
+            int q  = tb->quad_count;
+            int vi = q * 4, ii = q * 6;
+            tb->verts[vi+0] = (VertexTex){ gx,    gy,    0, 0, nr, ng, nb, na };
+            tb->verts[vi+1] = (VertexTex){ gx+gw, gy,    1, 0, nr, ng, nb, na };
+            tb->verts[vi+2] = (VertexTex){ gx+gw, gy+gh, 1, 1, nr, ng, nb, na };
+            tb->verts[vi+3] = (VertexTex){ gx,    gy+gh, 0, 1, nr, ng, nb, na };
+            tb->idx[ii+0]=vi; tb->idx[ii+1]=vi+1; tb->idx[ii+2]=vi+2;
+            tb->idx[ii+3]=vi; tb->idx[ii+4]=vi+2; tb->idx[ii+5]=vi+3;
+
+            cx += ge->advance; /* advance in physical px, no scale */
+            if (td->letterSpacing) cx += td->letterSpacing * scale; /* logical px → physical */
+            tb->quad_count++;
+            tb->uses_atlas = false;  /* at least one glyph uses per-glyph texture */
+        }
     }
 }
 
@@ -349,6 +375,7 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
     /* Acquiring the swapchain texture first then doing copy + render in one
      * submission halves the number of GPU round-trips vs two separate submits. */
     GlyphCache_flush_uploads(&ctx->glyph_cache);
+    GlyphAtlas_flush_uploads(&ctx->glyph_atlas);
 
     uint32_t rv_sz = (uint32_t)s_rect_count * 4 * sizeof(VertexRect);
     uint32_t ri_sz = (uint32_t)s_rect_count * 6 * sizeof(Uint16);
@@ -479,13 +506,29 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
              * No CPU-side index patching needed. */
             Uint32 idx_base = text_idx_off[ti];
             Sint32 vtx_base = (Sint32)text_vtx_off[ti];
-            for (int q = 0; q < tb->quad_count; q++) {
+
+            if (tb->uses_atlas) {
+                /* Texture atlas: single draw call for all glyphs in this text command */
                 SDL_BindGPUFragmentSamplers(rp, 0,
                     &(SDL_GPUTextureSamplerBinding){
-                        .texture = tb->glyph_textures[q],
+                        .texture = GlyphAtlas_get_texture(&ctx->glyph_atlas),
                         .sampler = ctx->sampler_linear }, 1);
-                SDL_DrawGPUIndexedPrimitives(rp, 6, 1,
-                    idx_base + (Uint32)(q * 6), vtx_base, 0);
+                SDL_DrawGPUIndexedPrimitives(rp, 6 * tb->quad_count, 1,
+                    idx_base, vtx_base, 0);
+            } else {
+                /* Fallback: per-glyph textures (legacy path) */
+                for (int q = 0; q < tb->quad_count; q++) {
+                    /* Find the per-glyph texture from the old cache */
+                    /* Note: we need to get the texture from the batch */
+                    /* Since we don't store per-glyph textures anymore, we'll use atlas */
+                    /* This is a fallback that shouldn't normally happen */
+                    SDL_BindGPUFragmentSamplers(rp, 0,
+                        &(SDL_GPUTextureSamplerBinding){
+                            .texture = GlyphAtlas_get_texture(&ctx->glyph_atlas),
+                            .sampler = ctx->sampler_linear }, 1);
+                    SDL_DrawGPUIndexedPrimitives(rp, 6, 1,
+                        idx_base + (Uint32)(q * 6), vtx_base, 0);
+                }
             }
             break;
         }

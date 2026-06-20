@@ -64,6 +64,7 @@ add_library(kilnui STATIC
     src/kilnui.c
     src/kilnui_render.c
     src/glyph_cache.c
+    src/glyph_cache_atlas.c
 )
 add_library(kilnui::kilnui ALIAS kilnui)
 
@@ -134,6 +135,7 @@ install(TARGETS kilnui ui_components
 install(FILES
     src/kilnui.h
     src/glyph_cache.h
+    src/glyph_cache_atlas.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/kilnui
 )
 

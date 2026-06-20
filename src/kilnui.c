@@ -481,6 +481,7 @@ bool KilnUI_init(KilnUI *ctx, const char *title,
     }
 
     GlyphCache_init(&ctx->glyph_cache, 512, ctx->gpu);
+    GlyphAtlas_init(&ctx->glyph_atlas, ctx->gpu);
 
     ctx->pipeline_rect = create_rect_pipeline(ctx->gpu, ctx->window);
     ctx->pipeline_text = create_text_pipeline(ctx->gpu, ctx->window);
@@ -569,6 +570,7 @@ void KilnUI_handle_event(KilnUI *ctx, const SDL_Event *e)
 void KilnUI_destroy(KilnUI *ctx)
 {
     GlyphCache_destroy(&ctx->glyph_cache);
+    GlyphAtlas_destroy(&ctx->glyph_atlas);
     if (ctx->rect_vbuf)    SDL_ReleaseGPUBuffer(ctx->gpu, ctx->rect_vbuf);
     if (ctx->rect_ibuf)    SDL_ReleaseGPUBuffer(ctx->gpu, ctx->rect_ibuf);
     if (ctx->text_vbuf)    SDL_ReleaseGPUBuffer(ctx->gpu, ctx->text_vbuf);

@@ -9,6 +9,7 @@
 
 #include "clay.h"
 #include "glyph_cache.h"
+#include "glyph_cache_atlas.h"
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <stdbool.h>
@@ -77,6 +78,7 @@ typedef struct
     int            font_size;
 
     GlyphCache glyph_cache;
+    GlyphAtlas  glyph_atlas;  /* texture atlas for batched text rendering */
 
     SDL_GPUGraphicsPipeline *pipeline_rect;
     SDL_GPUGraphicsPipeline *pipeline_text;
