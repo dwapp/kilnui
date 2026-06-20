@@ -263,9 +263,10 @@ static void build_text_batch(KilnUI *ctx, TextBatch *tb,
 /* ---- Main render function ---- */
 void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
 {
-    /* Reset font-size cache so the first batch correctly sets the size
-     * (measure_text_cb may have changed it since the last frame). */
-    s_last_phys_size = 0;
+    /* 不重置 s_last_phys_size：让缓存保留上一帧的值
+     * measure_text_cb 在布局阶段使用逻辑像素大小，
+     * build_text_batch 使用物理像素大小，两者不同
+     * set_font_size 会在需要时自动更新 */
 
     int pw, ph;
     SDL_GetWindowSizeInPixels(ctx->window, &pw, &ph);
