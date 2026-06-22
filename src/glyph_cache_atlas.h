@@ -20,22 +20,24 @@
 #include <stdint.h>
 
 /* ---- Atlas configuration ---- */
-#define ATLAS_WIDTH  2048
-#define ATLAS_HEIGHT 2048
-#define ATLAS_PADDING 1  /* 1px padding between glyphs to avoid bleeding */
+#define ATLAS_WIDTH   2048
+#define ATLAS_HEIGHT  2048
+#define ATLAS_PADDING 1 /* 1px padding between glyphs to avoid bleeding */
 
 /* ---- Shelf packing state ---- */
-typedef struct {
-    int x;        /* current x cursor in shelf */
-    int y;        /* top edge of shelf */
-    int height;   /* shelf height (tallest glyph in this shelf) */
+typedef struct
+{
+    int x;      /* current x cursor in shelf */
+    int y;      /* top edge of shelf */
+    int height; /* shelf height (tallest glyph in this shelf) */
 } AtlasShelf;
 
 #define MAX_SHELVES 256
 
 /* ---- Glyph entry with atlas coordinates ---- */
-typedef struct {
-    uint64_t key;         /* packed { codepoint | font_size << 32 } */
+typedef struct
+{
+    uint64_t key; /* packed { codepoint | font_size << 32 } */
     bool occupied;
 
     /* Atlas coordinates (in pixels) */
@@ -43,8 +45,8 @@ typedef struct {
     int w, h;             /* glyph size in atlas */
 
     /* Metrics (in physical pixels) */
-    int bearing_x;        /* minx from TTF_GetGlyphMetrics */
-    int bearing_y;        /* maxy (top bearing) */
+    int bearing_x; /* minx from TTF_GetGlyphMetrics */
+    int bearing_y; /* maxy (top bearing) */
     int advance;
 
     /* UV coordinates (normalized 0..1) */
@@ -52,15 +54,17 @@ typedef struct {
 } GlyphAtlasEntry;
 
 /* ---- Pending glyph upload ---- */
-typedef struct {
+typedef struct
+{
     SDL_Surface *surf;
-    int atlas_x, atlas_y;  /* destination in atlas */
+    int atlas_x, atlas_y; /* destination in atlas */
 } PendingAtlasUpload;
 
 /* ---- Atlas state ---- */
 #define MAX_PENDING_ATLAS_UPLOADS 512
 
-typedef struct {
+typedef struct
+{
     GlyphAtlasEntry *slots;
     uint32_t capacity;
     uint32_t count;
@@ -72,7 +76,7 @@ typedef struct {
     /* Shelf packing state */
     AtlasShelf shelves[MAX_SHELVES];
     int shelf_count;
-    int next_y;  /* next available y position for new shelf */
+    int next_y; /* next available y position for new shelf */
 
     /* Pending uploads */
     PendingAtlasUpload pending[MAX_PENDING_ATLAS_UPLOADS];
@@ -83,7 +87,7 @@ typedef struct {
 
     /* Persistent staging buffer (grow-only) to avoid per-frame allocation */
     SDL_GPUTransferBuffer *staging_tbuf;
-    uint32_t               staging_tbuf_cap;
+    uint32_t staging_tbuf_cap;
 
     SDL_GPUDevice *gpu;
 } GlyphAtlas;

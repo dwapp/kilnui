@@ -7,7 +7,6 @@
  */
 
 #include "../src/kilnui.h"
-#include "../src/ui/ui.h"
 #include "../src/ui/button.h"
 #include "../src/ui/checkbox.h"
 #include "../src/ui/container.h"
@@ -17,6 +16,7 @@
 #include "../src/ui/radio.h"
 #include "../src/ui/slider.h"
 #include "../src/ui/tooltip.h"
+#include "../src/ui/ui.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <stdio.h>
@@ -45,19 +45,19 @@ enum
     ID_TOOLTIP,
 };
 
-static bool  g_enabled = true;
-static bool  g_notify = false;
-static int   g_mode = 0;
-static bool  g_input_name_focus = false;
-static bool  g_input_email_focus = false;
-static char  g_input_name_buf[128] = "";
-static char  g_input_email_buf[128] = "demo@kilnui.local";
+static bool g_enabled = true;
+static bool g_notify = false;
+static int g_mode = 0;
+static bool g_input_name_focus = false;
+static bool g_input_email_focus = false;
+static char g_input_name_buf[128] = "";
+static char g_input_email_buf[128] = "demo@kilnui.local";
 static float g_volume = 0.62f;
 static float g_progress = 0.38f;
-static bool  g_dropdown_open = false;
-static int   g_dropdown_choice = 1;
-static int   g_clicks = 0;
-static char  g_status[160] = "Interact with any control";
+static bool g_dropdown_open = false;
+static int g_dropdown_choice = 1;
+static int g_clicks = 0;
+static char g_status[160] = "Interact with any control";
 
 static const char *const g_options[] = {
     "Compact",
@@ -68,15 +68,18 @@ static const char *const g_options[] = {
 static void separator(int uid)
 {
     CLAY(CLAY_SIDI(CLAY_STRING("Sep"), uid), {
-        .layout = { .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(1) } },
-        .backgroundColor = ds_theme->overlay,
-    }) {}
+                                                 .layout = { .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(1) } },
+                                                 .backgroundColor = ds_theme->overlay,
+                                             })
+    {
+    }
 }
 
 static void button_row(void)
 {
     TY_Text(10, "Buttons", TY_CAPTION);
-    UI_Container(20, UI_CONTAINER_ROW) {
+    UI_Container(20, UI_CONTAINER_ROW)
+    {
         if (UI_Button(ID_BTN_PRIMARY, "Primary", UI_BTN_PRIMARY, UI_BTN_MD, false)) {
             g_clicks++;
             snprintf(g_status, sizeof(g_status), "Primary button clicked");
@@ -98,7 +101,8 @@ static void button_row(void)
 
 static void choice_panel(void)
 {
-    UI_Container(30, UI_CONTAINER_CARD) {
+    UI_Container(30, UI_CONTAINER_CARD)
+    {
         TY_Text(31, "Selection", TY_H3);
         TY_Text(32, "Checkbox and radio components", TY_BODY);
 
@@ -130,33 +134,35 @@ static void choice_panel(void)
     }
 }
 
-
 static void composite_panel(void)
 {
-    UI_Container(60, UI_CONTAINER_CARD) {
+    UI_Container(60, UI_CONTAINER_CARD)
+    {
         TY_Text(61, "Composite UI Patterns", TY_H3);
         TY_Text(62, "Stat cards and scrollable lists", TY_BODY);
 
         separator(63);
 
-        UI_ROW(64, 8) {
+        UI_ROW(64, 8)
+        {
             UI_StatCard(0, "Active Users", "1,240", ds_theme->mauve);
             UI_StatCard(1, "Server Load", "42%", ds_theme->peach);
         }
-        
+
         UI_SPACER(8);
-        
+
         CLAY(CLAY_ID("EventLogPanel"), {
-            .layout = {
-                .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(160) },
-                .padding = { 12, 12, 12, 12 },
-                .childGap = 4,
-                .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            },
-            .backgroundColor = ds_theme->surface0,
-            .cornerRadius = CLAY_CORNER_RADIUS(DS_RADIUS_MD),
-            .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() },
-        }) {
+                                           .layout = {
+                                               .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(160) },
+                                               .padding = { 12, 12, 12, 12 },
+                                               .childGap = 4,
+                                               .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                                           },
+                                           .backgroundColor = ds_theme->surface0,
+                                           .cornerRadius = CLAY_CORNER_RADIUS(DS_RADIUS_MD),
+                                           .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() },
+                                       })
+        {
             const char *events[] = {
                 "System initialized", "Network connected", "Data synced",
                 "User logged in", "Settings updated", "Profile saved",
@@ -167,7 +173,6 @@ static void composite_panel(void)
                 UI_ListItem(1000 + i, events[i]);
             }
         }
-
     }
 }
 
@@ -175,7 +180,8 @@ static void form_panel(void)
 {
     DBG("form_panel: name_focus=%d email_focus=%d name_buf=\"%s\" email_buf=\"%s\"",
         g_input_name_focus, g_input_email_focus, g_input_name_buf, g_input_email_buf);
-    UI_Container(40, UI_CONTAINER_CARD) {
+    UI_Container(40, UI_CONTAINER_CARD)
+    {
         TY_Text(41, "Form", TY_H3);
         TY_Text(42, "Input, dropdown, slider, progress, and tooltip", TY_BODY);
 
@@ -248,7 +254,8 @@ static void status_bar(void)
     snprintf(buf, sizeof(buf), "%s | clicks=%d | mode=%c | volume=%.0f%%",
              g_status, g_clicks, (char)('A' + g_mode), g_volume * 100.0f);
 
-    UI_Container(50, UI_CONTAINER_PANEL) {
+    UI_Container(50, UI_CONTAINER_PANEL)
+    {
         TY_Text(51, "Current state", TY_CAPTION);
         TY_Text(52, buf, TY_BODY);
     }
@@ -257,49 +264,54 @@ static void status_bar(void)
 static void ui_build(void)
 {
     CLAY(CLAY_ID("Root"), {
-        .layout = {
-            .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
-            .padding = { 32, 32, 26, 26 },
-            .childGap = 16,
-            .layoutDirection = CLAY_TOP_TO_BOTTOM,
-        },
-        .backgroundColor = ds_theme->base,
-    }) {
+                              .layout = {
+                                  .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
+                                  .padding = { 32, 32, 26, 26 },
+                                  .childGap = 16,
+                                  .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                              },
+                              .backgroundColor = ds_theme->base,
+                          })
+    {
         CLAY(CLAY_ID("Title"), {
-            .layout = {
-                .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(44) },
-                .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
-            },
-        }) {
+                                   .layout = {
+                                       .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(44) },
+                                       .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
+                                   },
+                               })
+        {
             CLAY_TEXT(CLAY_STRING("KilnUI Component Gallery"), {
-                .textColor = ds_theme->text,
-                .fontSize = 26,
-            });
+                                                                   .textColor = ds_theme->text,
+                                                                   .fontSize = 26,
+                                                               });
         }
 
         button_row();
 
         CLAY(CLAY_ID("MainGrid"), {
-            .layout = {
-                .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
-                .childGap = 16,
-                .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_TOP },
-            },
-        }) {
+                                      .layout = {
+                                          .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
+                                          .childGap = 16,
+                                          .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_TOP },
+                                      },
+                                  })
+        {
             CLAY(CLAY_ID("LeftCol"), {
-                .layout = {
-                    .sizing = { CLAY_SIZING_PERCENT(0.42f), CLAY_SIZING_GROW(0) },
-                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                },
-            }) {
+                                         .layout = {
+                                             .sizing = { CLAY_SIZING_PERCENT(0.42f), CLAY_SIZING_GROW(0) },
+                                             .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                                         },
+                                     })
+            {
                 choice_panel();
             }
             CLAY(CLAY_ID("RightCol"), {
-                .layout = {
-                    .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
-                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                },
-            }) {
+                                          .layout = {
+                                              .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
+                                              .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                                          },
+                                      })
+            {
                 composite_panel();
                 form_panel();
             }
@@ -311,9 +323,12 @@ static void ui_build(void)
 
 /* Queued text input events — processed after ui_build() so focus state is current */
 #define MAX_TEXT_QUEUE 64
-typedef struct { char text[32]; } TextEvent;
+typedef struct
+{
+    char text[32];
+} TextEvent;
 static TextEvent s_text_queue[MAX_TEXT_QUEUE];
-static int       s_text_queue_len = 0;
+static int s_text_queue_len = 0;
 
 static bool s_backspace_queued = false;
 
@@ -382,8 +397,10 @@ static void process_queued_text_input(void)
 
     if (s_backspace_queued) {
         char *buf = NULL;
-        if (g_input_name_focus) buf = g_input_name_buf;
-        else if (g_input_email_focus) buf = g_input_email_buf;
+        if (g_input_name_focus)
+            buf = g_input_name_buf;
+        else if (g_input_email_focus)
+            buf = g_input_email_buf;
         if (buf) {
             size_t len = strlen(buf);
             if (len > 0) {
@@ -421,7 +438,7 @@ int main(int argc, char *argv[])
 
     /* Tell UI_Input which window to use for SDL text input */
     UI_SetTextInputWindow(ctx.window);
-    DBG("Init: window=%p", (void*)ctx.window);
+    DBG("Init: window=%p", (void *)ctx.window);
 
     bool running = true;
     bool dirty = true;

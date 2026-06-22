@@ -6,8 +6,8 @@
  */
 
 #include "../src/kilnui.h"
-#include "../src/ui/ui.h"
 #include "../src/ui/input.h"
+#include "../src/ui/ui.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <stdio.h>
@@ -16,7 +16,7 @@
 /* ---- State ---- */
 static char g_text_buf[256] = "";
 static bool g_focused = false;
-static int  g_frame = 0;
+static int g_frame = 0;
 
 /* ---- Helper: log with prefix ---- */
 #define LOG(fmt, ...) fprintf(stderr, "[frame %d] " fmt "\n", g_frame, ##__VA_ARGS__)
@@ -27,19 +27,20 @@ static void ui_build(void)
     g_frame++;
 
     CLAY(CLAY_ID("Root"), {
-        .layout = {
-            .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
-            .padding = { 40, 40, 40, 40 },
-            .childGap = 20,
-            .layoutDirection = CLAY_TOP_TO_BOTTOM,
-        },
-        .backgroundColor = ds_theme->base,
-    }) {
+                              .layout = {
+                                  .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
+                                  .padding = { 40, 40, 40, 40 },
+                                  .childGap = 20,
+                                  .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                              },
+                              .backgroundColor = ds_theme->base,
+                          })
+    {
         /* Title */
         CLAY_TEXT(CLAY_STRING("Input Demo — Debug"), &(Clay_TextElementConfig){
-            .textColor = ds_theme->text,
-            .fontSize = 24,
-        });
+                                                         .textColor = ds_theme->text,
+                                                         .fontSize = 24,
+                                                     });
 
         /* Instructions */
         CLAY_TEXT(CLAY_STRING("Click the input to focus. Type text. ESC to unfocus. Click outside to unfocus."),
@@ -70,20 +71,20 @@ static void ui_build(void)
                  "focused=%d | buf=\"%s\" | len=%zu | mouse_released=%d",
                  g_focused, g_text_buf, strlen(g_text_buf), UI__mouse_released);
         CLAY_TEXT(UI__str(dbg), &(Clay_TextElementConfig){
-            .textColor = ds_theme->overlay0,
-            .fontSize = 12,
-        });
+                                    .textColor = ds_theme->overlay0,
+                                    .fontSize = 12,
+                                });
 
         /* SDL text input status */
         SDL_Window *win = SDL_GetKeyboardFocus();
         bool text_active = win ? SDL_TextInputActive(win) : false;
         snprintf(dbg, sizeof(dbg),
                  "SDL_TextInputActive=%d | keyboard_focus=%p | text_input_window=%p",
-                 text_active, (void*)win, (void*)UI__text_input_window);
+                 text_active, (void *)win, (void *)UI__text_input_window);
         CLAY_TEXT(UI__str(dbg), &(Clay_TextElementConfig){
-            .textColor = ds_theme->overlay0,
-            .fontSize = 12,
-        });
+                                    .textColor = ds_theme->overlay0,
+                                    .fontSize = 12,
+                                });
     }
 }
 
@@ -111,11 +112,11 @@ int main(int argc, char *argv[])
         LOG("ERROR: KilnUI_init failed");
         return 1;
     }
-    LOG("KilnUI_init OK, window=%p", (void*)ctx.window);
+    LOG("KilnUI_init OK, window=%p", (void *)ctx.window);
 
     /* Set the window for text input */
     UI_SetTextInputWindow(ctx.window);
-    LOG("UI_SetTextInputWindow(%p) called", (void*)ctx.window);
+    LOG("UI_SetTextInputWindow(%p) called", (void *)ctx.window);
 
     bool running = true;
     bool dirty = true;
@@ -214,7 +215,8 @@ int main(int argc, char *argv[])
             KilnUI_handle_event(&ctx, &e);
         }
 
-        if (!running) break;
+        if (!running)
+            break;
 
         if (dirty) {
             UI_SetPointerState(mouse_down, mouse_released, mx, my);

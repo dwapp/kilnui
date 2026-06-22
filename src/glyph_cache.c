@@ -45,9 +45,9 @@ static bool grow(GlyphCache *gc)
     if (!new_slots)
         return false;
 
-    gc->slots    = new_slots;
+    gc->slots = new_slots;
     gc->capacity = new_cap;
-    gc->count    = 0;
+    gc->count = 0;
 
     for (uint32_t i = 0; i < old_cap; i++) {
         if (old_slots[i].occupied) {
@@ -67,14 +67,14 @@ bool GlyphCache_init(GlyphCache *gc, uint32_t initial_cap, SDL_GPUDevice *gpu)
     while (cap < initial_cap)
         cap <<= 1;
 
-    gc->slots         = (GlyphEntry *)SDL_calloc(cap, sizeof(GlyphEntry));
-    gc->capacity      = cap;
-    gc->count         = 0;
-    gc->gpu           = gpu;
+    gc->slots = (GlyphEntry *)SDL_calloc(cap, sizeof(GlyphEntry));
+    gc->capacity = cap;
+    gc->count = 0;
+    gc->gpu = gpu;
     gc->pending_count = 0;
 
     /* Initialize persistent staging buffer (will be grown as needed) */
-    gc->staging_tbuf     = NULL;
+    gc->staging_tbuf = NULL;
     gc->staging_tbuf_cap = 0;
 
     return gc->slots != NULL;
@@ -132,14 +132,14 @@ const GlyphEntry *GlyphCache_get(GlyphCache *gc, TTF_Font *font,
     /* Create the GPU texture now (so we can return the entry immediately),
      * but defer pixel upload to GlyphCache_flush_uploads(). */
     SDL_GPUTexture *tex = SDL_CreateGPUTexture(gc->gpu, &(SDL_GPUTextureCreateInfo){
-        .type                = SDL_GPU_TEXTURETYPE_2D,
-        .format              = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
-        .width               = (Uint32)tex_w,
-        .height              = (Uint32)tex_h,
-        .layer_count_or_depth = 1,
-        .num_levels          = 1,
-        .usage               = SDL_GPU_TEXTUREUSAGE_SAMPLER,
-    });
+                                                            .type = SDL_GPU_TEXTURETYPE_2D,
+                                                            .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+                                                            .width = (Uint32)tex_w,
+                                                            .height = (Uint32)tex_h,
+                                                            .layer_count_or_depth = 1,
+                                                            .num_levels = 1,
+                                                            .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER,
+                                                        });
     if (!tex) {
         SDL_Log("GlyphCache: CreateGPUTexture: %s", SDL_GetError());
         SDL_DestroySurface(rgba);
@@ -168,14 +168,14 @@ const GlyphEntry *GlyphCache_get(GlyphCache *gc, TTF_Font *font,
 
     int bearing_y_px = (maxy > 0) ? maxy : tex_h;
     gc->slots[idx] = (GlyphEntry){
-        .key      = key,
+        .key = key,
         .occupied = true,
-        .tex      = tex,
-        .w        = tex_w,
-        .h        = tex_h,
+        .tex = tex,
+        .w = tex_w,
+        .h = tex_h,
         .bearing_x = minx,
         .bearing_y = bearing_y_px,
-        .advance   = advance,
+        .advance = advance,
     };
     gc->count++;
     return &gc->slots[idx];
@@ -193,8 +193,8 @@ static void ensure_staging_buffer(GlyphCache *gc, uint32_t needed)
     /* Grow with 1.5x headroom to amortize reallocation */
     uint32_t new_cap = needed + needed / 2;
     gc->staging_tbuf = SDL_CreateGPUTransferBuffer(gc->gpu,
-        &(SDL_GPUTransferBufferCreateInfo){
-            .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = new_cap });
+                                                   &(SDL_GPUTransferBufferCreateInfo){
+                                                       .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = new_cap });
     if (!gc->staging_tbuf) {
         SDL_Log("GlyphCache: staging buffer allocation failed: %s", SDL_GetError());
         gc->staging_tbuf_cap = 0;
@@ -254,19 +254,22 @@ void GlyphCache_flush_uploads_ex(GlyphCache *gc, SDL_GPUCommandBuffer *cmdbuf)
 
     offset = 0;
     for (int i = 0; i < gc->pending_count; i++) {
-        SDL_Surface *s   = gc->pending[i].surf;
+        SDL_Surface *s = gc->pending[i].surf;
         SDL_GPUTexture *t = gc->pending[i].tex;
         SDL_UploadToGPUTexture(cp,
-            &(SDL_GPUTextureTransferInfo){
-                .transfer_buffer = gc->staging_tbuf,
-                .offset          = offset,
-                .pixels_per_row  = (Uint32)(s->pitch / 4),
-                .rows_per_layer  = (Uint32)s->h,
-            },
-            &(SDL_GPUTextureRegion){
-                .texture = t,
-                .w = (Uint32)s->w, .h = (Uint32)s->h, .d = 1,
-            }, false);
+                               &(SDL_GPUTextureTransferInfo){
+                                   .transfer_buffer = gc->staging_tbuf,
+                                   .offset = offset,
+                                   .pixels_per_row = (Uint32)(s->pitch / 4),
+                                   .rows_per_layer = (Uint32)s->h,
+                               },
+                               &(SDL_GPUTextureRegion){
+                                   .texture = t,
+                                   .w = (Uint32)s->w,
+                                   .h = (Uint32)s->h,
+                                   .d = 1,
+                               },
+                               false);
         offset += (Uint32)(s->pitch * s->h);
         SDL_DestroySurface(s);
     }
@@ -291,7 +294,7 @@ void GlyphCache_destroy(GlyphCache *gc)
     /* Release persistent staging buffer */
     if (gc->staging_tbuf)
         SDL_ReleaseGPUTransferBuffer(gc->gpu, gc->staging_tbuf);
-    gc->staging_tbuf     = NULL;
+    gc->staging_tbuf = NULL;
     gc->staging_tbuf_cap = 0;
 
     if (!gc->slots)
@@ -301,7 +304,7 @@ void GlyphCache_destroy(GlyphCache *gc)
             SDL_ReleaseGPUTexture(gc->gpu, gc->slots[i].tex);
     }
     SDL_free(gc->slots);
-    gc->slots    = NULL;
+    gc->slots = NULL;
     gc->capacity = 0;
-    gc->count    = 0;
+    gc->count = 0;
 }

@@ -2,14 +2,14 @@
 /* src/ui/button.c — Reusable Clay button component implementation. */
 
 #include "button.h"
-#include "ui_internal.h"
 #include "../kilnui.h"
+#include "ui_internal.h"
 
 #include "design_system.h"
 
 /* ---- Per-frame mouse state ---- */
-bool  UI__mouse_down = false;
-bool  UI__mouse_released = false;
+bool UI__mouse_down = false;
+bool UI__mouse_released = false;
 float UI__mouse_x = 0.0f;
 float UI__mouse_y = 0.0f;
 
@@ -29,16 +29,23 @@ void UI_SetTextInputWindow(SDL_Window *win)
     UI__text_input_window = win;
 }
 
-static Clay_Color get_btn_bg(UIBtnVariant variant, int state) {
+static Clay_Color get_btn_bg(UIBtnVariant variant, int state)
+{
     if (state == 3) { /* Disabled */
-        if (variant == UI_BTN_PRIMARY)   return ds_theme->surface1;
-        if (variant == UI_BTN_SECONDARY) return ds_theme->crust;
-        if (variant == UI_BTN_GHOST)     return (Clay_Color){0,0,0,0};
-        if (variant == UI_BTN_DANGER)    return ds_theme->surface0;
+        if (variant == UI_BTN_PRIMARY)
+            return ds_theme->surface1;
+        if (variant == UI_BTN_SECONDARY)
+            return ds_theme->crust;
+        if (variant == UI_BTN_GHOST)
+            return (Clay_Color){ 0, 0, 0, 0 };
+        if (variant == UI_BTN_DANGER)
+            return ds_theme->surface0;
     }
     if (variant == UI_BTN_PRIMARY) {
-        if (state == 0) return ds_theme->accent;
-        if (state == 1) return ds_theme->accent_alt;
+        if (state == 0)
+            return ds_theme->accent;
+        if (state == 1)
+            return ds_theme->accent_alt;
         return ds_theme->accent; /* pressed */
     }
     if (variant == UI_BTN_SECONDARY) {
@@ -46,32 +53,46 @@ static Clay_Color get_btn_bg(UIBtnVariant variant, int state) {
          * CLAY_RENDER_COMMAND_TYPE_BORDER loses cornerRadius so the border
          * renders with sharp corners.  Use a distinct background color instead
          * until kilnui_render.c can properly pass cornerRadius to border SDF. */
-        if (state == 0) return ds_theme->surface2;
-        if (state == 1) return ds_theme->overlay0;
+        if (state == 0)
+            return ds_theme->surface2;
+        if (state == 1)
+            return ds_theme->overlay0;
         return ds_theme->surface1; /* pressed */
     }
     if (variant == UI_BTN_GHOST) {
-        if (state == 0) return (Clay_Color){0,0,0,0};
-        if (state == 1) return ds_theme->surface0;
+        if (state == 0)
+            return (Clay_Color){ 0, 0, 0, 0 };
+        if (state == 1)
+            return ds_theme->surface0;
         return ds_theme->surface1; /* pressed */
     }
     if (variant == UI_BTN_DANGER) {
         Clay_Color c = ds_theme->error;
-        if (state == 1) { c.a = 200; return c; }
-        if (state == 2) { c.a = 255; return c; }
+        if (state == 1) {
+            c.a = 200;
+            return c;
+        }
+        if (state == 2) {
+            c.a = 255;
+            return c;
+        }
         return c;
     }
-    return (Clay_Color){0};
+    return (Clay_Color){ 0 };
 }
 
-static Clay_Color get_btn_fg(UIBtnVariant variant, bool disabled) {
-    if (disabled) return ds_theme->muted;
+static Clay_Color get_btn_fg(UIBtnVariant variant, bool disabled)
+{
+    if (disabled)
+        return ds_theme->muted;
     if (variant == UI_BTN_PRIMARY || variant == UI_BTN_DANGER) {
         /* Contrast text for filled buttons (using base/crust usually) */
-        return ds_theme->base; 
+        return ds_theme->base;
     }
-    if (variant == UI_BTN_SECONDARY) return ds_theme->text;
-    if (variant == UI_BTN_GHOST) return ds_theme->subtext;
+    if (variant == UI_BTN_SECONDARY)
+        return ds_theme->text;
+    if (variant == UI_BTN_GHOST)
+        return ds_theme->subtext;
     return ds_theme->text;
 }
 
@@ -146,17 +167,14 @@ bool UI_Button(int uid, const char *label,
         if (!disabled && variant == UI_BTN_PRIMARY) {
             Clay_Color shadow_color = bg;
             shadow_color.a = 100;
-            CLAY(CLAY_ID_LOCAL("shadow"), {
-                .floating = {
-                    .attachPoints = { .element = CLAY_ATTACH_POINT_CENTER_CENTER, .parent = CLAY_ATTACH_POINT_CENTER_CENTER },
-                    .zIndex = -1,
-                    .attachTo = CLAY_ATTACH_TO_PARENT
-                },
-                .layout = { .sizing = { CLAY_SIZING_GROW(), CLAY_SIZING_GROW() } },
-                .custom = { .customData = shadow_data },
-                .backgroundColor = shadow_color,
-                .cornerRadius = CLAY_CORNER_RADIUS((float)sz->radius)
-            }) {}
+            CLAY(CLAY_ID_LOCAL("shadow"), { .floating = {
+                                                .attachPoints = { .element = CLAY_ATTACH_POINT_CENTER_CENTER, .parent = CLAY_ATTACH_POINT_CENTER_CENTER },
+                                                .zIndex = -1,
+                                                .attachTo = CLAY_ATTACH_TO_PARENT },
+                                            .layout = { .sizing = { CLAY_SIZING_GROW(), CLAY_SIZING_GROW() } },
+                                            .custom = { .customData = shadow_data },
+                                            .backgroundColor = shadow_color,
+                                            .cornerRadius = CLAY_CORNER_RADIUS((float)sz->radius) }) {}
         }
 
         CLAY_TEXT(lbl, {
@@ -177,22 +195,26 @@ bool UI_IconButton(int uid, const char *icon, int size,
     bool clicked = hovered && UI__mouse_released && !disabled;
 
     int state = 0;
-    if (disabled) state = 3;
-    else if (pressed) state = 2;
-    else if (hovered) state = 1;
+    if (disabled)
+        state = 3;
+    else if (pressed)
+        state = 2;
+    else if (hovered)
+        state = 1;
 
     Clay_Color bg = get_btn_bg(variant, state);
     Clay_Color fg = get_btn_fg(variant, disabled);
 
     CLAY(id, {
-        .layout = {
-            .sizing = { CLAY_SIZING_FIXED((float)(size + 12)),
-                        CLAY_SIZING_FIXED((float)(size + 12)) },
-            .childAlignment = { CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER },
-        },
-        .backgroundColor = bg,
-        .cornerRadius = CLAY_CORNER_RADIUS(DS_RADIUS_MD),
-    }) {
+                 .layout = {
+                     .sizing = { CLAY_SIZING_FIXED((float)(size + 12)),
+                                 CLAY_SIZING_FIXED((float)(size + 12)) },
+                     .childAlignment = { CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER },
+                 },
+                 .backgroundColor = bg,
+                 .cornerRadius = CLAY_CORNER_RADIUS(DS_RADIUS_MD),
+             })
+    {
         CLAY_TEXT(UI__str(icon), { .textColor = fg, .fontSize = (uint16_t)size });
     }
     return clicked;

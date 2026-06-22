@@ -10,8 +10,8 @@
 
 #define UI_C(r, g, b, a) ((Clay_Color){ r, g, b, a })
 
-extern bool  UI__mouse_down;
-extern bool  UI__mouse_released;
+extern bool UI__mouse_down;
+extern bool UI__mouse_released;
 extern float UI__mouse_x;
 extern float UI__mouse_y;
 

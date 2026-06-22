@@ -37,26 +37,26 @@ typedef struct
 
 typedef struct
 {
-    SDL_Surface    *surf; /* ABGR8888 surface ready to copy */
-    SDL_GPUTexture *tex;  /* destination texture (already created) */
+    SDL_Surface *surf;   /* ABGR8888 surface ready to copy */
+    SDL_GPUTexture *tex; /* destination texture (already created) */
 } PendingGlyphUpload;
 
 /* ---- Hash table ---- */
 typedef struct
 {
     GlyphEntry *slots;
-    uint32_t    capacity;
-    uint32_t    count;
+    uint32_t capacity;
+    uint32_t count;
     SDL_GPUDevice *gpu; /* needed for releasing textures on destroy */
 
     /* Pending uploads — filled by GlyphCache_get on cache miss,
      * drained by GlyphCache_flush_uploads() before the render pass. */
     PendingGlyphUpload pending[MAX_PENDING_GLYPH_UPLOADS];
-    int                pending_count;
+    int pending_count;
 
     /* Persistent transfer buffer (grow-only) to avoid per-frame allocation */
     SDL_GPUTransferBuffer *staging_tbuf;
-    uint32_t               staging_tbuf_cap;
+    uint32_t staging_tbuf_cap;
 } GlyphCache;
 
 /* Pack a codepoint + font_size into a single 64-bit key */

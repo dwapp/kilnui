@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 #include "container.h"
-#include "ui_internal.h"
 #include "design_system.h"
+#include "ui_internal.h"
 
 Clay_ElementDeclaration UI_ContainerConfig(UIContainerVariant variant)
 {

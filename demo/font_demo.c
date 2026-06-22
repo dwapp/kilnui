@@ -11,26 +11,26 @@
 static void ui_build(void)
 {
     CLAY(CLAY_ID("Root"), {
-        .layout = {
-            .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
-            .padding = { 32, 32, 32, 32 },
-            .childGap = 16,
-            .layoutDirection = CLAY_TOP_TO_BOTTOM,
-        },
-        .backgroundColor = ds_theme->base,
-    }) {
-        CLAY(CLAY_ID("ScrollArea"), {
-            .layout = {
-                .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
-                .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            },
-            .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() }
-        }) {
+                              .layout = {
+                                  .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
+                                  .padding = { 32, 32, 32, 32 },
+                                  .childGap = 16,
+                                  .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                              },
+                              .backgroundColor = ds_theme->base,
+                          })
+    {
+        CLAY(CLAY_ID("ScrollArea"), { .layout = {
+                                          .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
+                                          .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                                      },
+                                      .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() } })
+        {
             static char bufs[2000][256];
             int base_codepoint = 0x4E00; // Start of CJK Unified Ideographs
             for (int i = 0; i < 2000; i++) {
                 // Generate 10 unique Chinese characters per line
-                char cjk_str[64] = {0};
+                char cjk_str[64] = { 0 };
                 int idx = 0;
                 for (int c = 0; c < 10; c++) {
                     int cp = base_codepoint + (i * 10) + c;
@@ -40,12 +40,12 @@ static void ui_build(void)
                     cjk_str[idx++] = 0x80 | (cp & 0x3F);
                 }
                 cjk_str[idx] = '\0';
-                
+
                 snprintf(bufs[i], sizeof(bufs[i]), "Unique characters %d: %s", i, cjk_str);
                 CLAY_TEXT(((Clay_String){ .chars = bufs[i], .length = strlen(bufs[i]) }), {
-                    .textColor = ds_theme->text,
-                    .fontSize = 16,
-                });
+                                                                                              .textColor = ds_theme->text,
+                                                                                              .fontSize = 16,
+                                                                                          });
             }
         }
     }

@@ -43,9 +43,9 @@ static bool grow(GlyphAtlas *ga)
     if (!new_slots)
         return false;
 
-    ga->slots    = new_slots;
+    ga->slots = new_slots;
     ga->capacity = new_cap;
-    ga->count    = 0;
+    ga->count = 0;
 
     for (uint32_t i = 0; i < old_cap; i++) {
         if (old_slots[i].occupied) {
@@ -61,7 +61,7 @@ static bool grow(GlyphAtlas *ga)
 /* Initialize the atlas */
 bool GlyphAtlas_init(GlyphAtlas *ga, SDL_GPUDevice *gpu)
 {
-    uint32_t cap = 1024;  /* initial capacity */
+    uint32_t cap = 1024; /* initial capacity */
     while (cap < 1024)
         cap <<= 1;
 
@@ -69,18 +69,18 @@ bool GlyphAtlas_init(GlyphAtlas *ga, SDL_GPUDevice *gpu)
     if (!ga->slots)
         return false;
 
-    ga->capacity      = cap;
-    ga->count         = 0;
-    ga->gpu           = gpu;
-    ga->atlas_tex     = NULL;
+    ga->capacity = cap;
+    ga->count = 0;
+    ga->gpu = gpu;
+    ga->atlas_tex = NULL;
     ga->atlas_initialized = false;
-    ga->shelf_count   = 0;
-    ga->next_y        = 0;
+    ga->shelf_count = 0;
+    ga->next_y = 0;
     ga->pending_count = 0;
-    ga->dirty         = false;
+    ga->dirty = false;
 
     /* Initialize persistent staging buffer (will be grown as needed) */
-    ga->staging_tbuf     = NULL;
+    ga->staging_tbuf = NULL;
     ga->staging_tbuf_cap = 0;
 
     return true;
@@ -93,14 +93,14 @@ static bool ensure_atlas_texture(GlyphAtlas *ga)
         return true;
 
     ga->atlas_tex = SDL_CreateGPUTexture(ga->gpu, &(SDL_GPUTextureCreateInfo){
-        .type                = SDL_GPU_TEXTURETYPE_2D,
-        .format              = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
-        .width               = ATLAS_WIDTH,
-        .height              = ATLAS_HEIGHT,
-        .layer_count_or_depth = 1,
-        .num_levels          = 1,
-        .usage               = SDL_GPU_TEXTUREUSAGE_SAMPLER,
-    });
+                                                      .type = SDL_GPU_TEXTURETYPE_2D,
+                                                      .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+                                                      .width = ATLAS_WIDTH,
+                                                      .height = ATLAS_HEIGHT,
+                                                      .layer_count_or_depth = 1,
+                                                      .num_levels = 1,
+                                                      .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER,
+                                                  });
 
     if (!ga->atlas_tex) {
         SDL_Log("GlyphAtlas: Failed to create atlas texture: %s", SDL_GetError());
@@ -226,19 +226,19 @@ const GlyphAtlasEntry *GlyphAtlas_get(GlyphAtlas *ga, TTF_Font *font,
 
     int bearing_y_px = (maxy > 0) ? maxy : gh;
     ga->slots[idx] = (GlyphAtlasEntry){
-        .key       = key,
-        .occupied  = true,
-        .atlas_x   = atlas_x,
-        .atlas_y   = atlas_y,
-        .w         = gw,
-        .h         = gh,
+        .key = key,
+        .occupied = true,
+        .atlas_x = atlas_x,
+        .atlas_y = atlas_y,
+        .w = gw,
+        .h = gh,
         .bearing_x = minx,
         .bearing_y = bearing_y_px,
-        .advance   = advance,
-        .u0        = u0,
-        .v0        = v0,
-        .u1        = u1,
-        .v1        = v1,
+        .advance = advance,
+        .u0 = u0,
+        .v0 = v0,
+        .u1 = u1,
+        .v1 = v1,
     };
     ga->count++;
     ga->dirty = true;
@@ -258,8 +258,8 @@ static void ensure_staging_buffer(GlyphAtlas *ga, uint32_t needed)
     /* Grow with 1.5x headroom to amortize reallocation */
     uint32_t new_cap = needed + needed / 2;
     ga->staging_tbuf = SDL_CreateGPUTransferBuffer(ga->gpu,
-        &(SDL_GPUTransferBufferCreateInfo){
-            .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = new_cap });
+                                                   &(SDL_GPUTransferBufferCreateInfo){
+                                                       .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = new_cap });
     if (!ga->staging_tbuf) {
         SDL_Log("GlyphAtlas: staging buffer allocation failed: %s", SDL_GetError());
         ga->staging_tbuf_cap = 0;
@@ -324,20 +324,21 @@ void GlyphAtlas_flush_uploads_ex(GlyphAtlas *ga, SDL_GPUCommandBuffer *cmdbuf)
         int atlas_y = ga->pending[i].atlas_y;
 
         SDL_UploadToGPUTexture(cp,
-            &(SDL_GPUTextureTransferInfo){
-                .transfer_buffer = ga->staging_tbuf,
-                .offset          = offset,
-                .pixels_per_row  = (Uint32)(s->pitch / 4),
-                .rows_per_layer  = (Uint32)s->h,
-            },
-            &(SDL_GPUTextureRegion){
-                .texture = ga->atlas_tex,
-                .x = (Uint32)atlas_x,
-                .y = (Uint32)atlas_y,
-                .w = (Uint32)s->w,
-                .h = (Uint32)s->h,
-                .d = 1,
-            }, false);
+                               &(SDL_GPUTextureTransferInfo){
+                                   .transfer_buffer = ga->staging_tbuf,
+                                   .offset = offset,
+                                   .pixels_per_row = (Uint32)(s->pitch / 4),
+                                   .rows_per_layer = (Uint32)s->h,
+                               },
+                               &(SDL_GPUTextureRegion){
+                                   .texture = ga->atlas_tex,
+                                   .x = (Uint32)atlas_x,
+                                   .y = (Uint32)atlas_y,
+                                   .w = (Uint32)s->w,
+                                   .h = (Uint32)s->h,
+                                   .d = 1,
+                               },
+                               false);
         offset += (Uint32)(s->pitch * s->h);
         SDL_DestroySurface(s);
     }
@@ -369,7 +370,7 @@ void GlyphAtlas_destroy(GlyphAtlas *ga)
     /* Release persistent staging buffer */
     if (ga->staging_tbuf)
         SDL_ReleaseGPUTransferBuffer(ga->gpu, ga->staging_tbuf);
-    ga->staging_tbuf     = NULL;
+    ga->staging_tbuf = NULL;
     ga->staging_tbuf_cap = 0;
 
     if (ga->atlas_tex)
@@ -378,7 +379,7 @@ void GlyphAtlas_destroy(GlyphAtlas *ga)
 
     if (ga->slots)
         SDL_free(ga->slots);
-    ga->slots    = NULL;
+    ga->slots = NULL;
     ga->capacity = 0;
-    ga->count    = 0;
+    ga->count = 0;
 }

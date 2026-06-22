@@ -1,12 +1,12 @@
 /* SPDX-License-Identifier: MIT */
 #include "input.h"
-#include "ui_internal.h"
 #include "design_system.h"
+#include "ui_internal.h"
 #include <stdio.h>
 
 /* Track which UI_Input uid currently holds focus so multiple inputs
  * don't fight over SDL_StartTextInput / SDL_StopTextInput. */
-static int  s_focused_uid = -1;        /* -1 = no input focused */
+static int s_focused_uid = -1; /* -1 = no input focused */
 static bool s_text_input_active = false;
 
 UIInputResult UI_Input(int uid, const char *label, const char *value,
@@ -49,33 +49,33 @@ UIInputResult UI_Input(int uid, const char *label, const char *value,
     }
 
     CLAY(CLAY_SIDI(CLAY_STRING("UIInputWrap"), uid), {
-        .layout = {
-            .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) },
-            .childGap = 6,
-            .layoutDirection = CLAY_TOP_TO_BOTTOM,
-        },
-    }) {
+                                                         .layout = {
+                                                             .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) },
+                                                             .childGap = 6,
+                                                             .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                                                         },
+                                                     })
+    {
         if (label && label[0]) {
             CLAY_TEXT(UI__str(label), {
-                .textColor = disabled ? ds_theme->surface2 : ds_theme->muted,
-                .fontSize = 12,
-            });
+                                          .textColor = disabled ? ds_theme->surface2 : ds_theme->muted,
+                                          .fontSize = 12,
+                                      });
         }
         CLAY(id, {
-            .layout = {
-                .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(38) },
-                .padding = { 12, 12, 8, 8 },
-                .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
-            },
-            .backgroundColor = disabled ? ds_theme->surface0 :
-                (new_focused ? ds_theme->surface1 : (hovered ? ds_theme->surface1 : ds_theme->surface0)),
-            .cornerRadius = CLAY_CORNER_RADIUS(7),
-        }) {
+                     .layout = {
+                         .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(38) },
+                         .padding = { 12, 12, 8, 8 },
+                         .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER },
+                     },
+                     .backgroundColor = disabled ? ds_theme->surface0 : (new_focused ? ds_theme->surface1 : (hovered ? ds_theme->surface1 : ds_theme->surface0)),
+                     .cornerRadius = CLAY_CORNER_RADIUS(7),
+                 })
+        {
             CLAY_TEXT(UI__str(shown), {
-                .textColor = disabled ? ds_theme->muted :
-                    (showing_placeholder ? ds_theme->muted : ds_theme->text),
-                .fontSize = 14,
-            });
+                                          .textColor = disabled ? ds_theme->muted : (showing_placeholder ? ds_theme->muted : ds_theme->text),
+                                          .fontSize = 14,
+                                      });
         }
     }
 

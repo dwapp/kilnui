@@ -33,16 +33,19 @@ typedef struct
 } VertexTex;
 
 /* ---- Custom Shader Data ---- */
-typedef enum {
+typedef enum
+{
     KILNUI_CUSTOM_SHADOW = 1,
     KILNUI_CUSTOM_BORDER = 2,
 } KilnUICustomType;
 
-typedef struct {
+typedef struct
+{
     KilnUICustomType type;
 } KilnUICustomHeader;
 
-typedef struct {
+typedef struct
+{
     KilnUICustomType type;
     float offset_x;
     float offset_y;
@@ -50,7 +53,8 @@ typedef struct {
     float spread;
 } KilnUICustomShadow;
 
-typedef struct {
+typedef struct
+{
     KilnUICustomType type;
     float width_top;
     float width_right;
@@ -62,50 +66,50 @@ typedef struct {
 
 /* ---- Capacity constants ---- */
 #define MAX_RECTS          8192
-#define MAX_TEXT_CMDS      2048  /* max TEXT render commands per frame */
+#define MAX_TEXT_CMDS      2048 /* max TEXT render commands per frame */
 #define MAX_FALLBACK_FONTS 8
 
 /* ---- Main context ---- */
 typedef struct
 {
-    SDL_Window    *window;
+    SDL_Window *window;
     SDL_GPUDevice *gpu;
-    TTF_Font      *font;
-    TTF_Font      *fallback_fonts[MAX_FALLBACK_FONTS];
-    int            fallback_font_count;
-    float          dpi_scale;   /* physical_px / logical_px (render scale) */
-    float          mouse_scale; /* SDL logical mouse coords → Clay layout coords */
-    bool           dirty;       /* true = re-render needed this frame */
-    int            font_size;
-    float          cached_font_size;  /* cached font size to avoid redundant TTF_SetFontSize calls */
+    TTF_Font *font;
+    TTF_Font *fallback_fonts[MAX_FALLBACK_FONTS];
+    int fallback_font_count;
+    float dpi_scale;   /* physical_px / logical_px (render scale) */
+    float mouse_scale; /* SDL logical mouse coords → Clay layout coords */
+    bool dirty;        /* true = re-render needed this frame */
+    int font_size;
+    float cached_font_size; /* cached font size to avoid redundant TTF_SetFontSize calls */
 
     GlyphCache glyph_cache;
-    GlyphAtlas  glyph_atlas;  /* texture atlas for batched text rendering */
+    GlyphAtlas glyph_atlas; /* texture atlas for batched text rendering */
 
     SDL_GPUGraphicsPipeline *pipeline_rect;
     SDL_GPUGraphicsPipeline *pipeline_text;
     SDL_GPUGraphicsPipeline *pipeline_shadow;
     SDL_GPUGraphicsPipeline *pipeline_border;
-    SDL_GPUSampler          *sampler_linear;
+    SDL_GPUSampler *sampler_linear;
 
     /* Persistent GPU buffers — grown on demand, never shrunk mid-session.
      * Reusing them avoids the per-frame Create/Release overhead. */
-    SDL_GPUBuffer          *rect_vbuf;
-    SDL_GPUBuffer          *rect_ibuf;
-    uint32_t                rect_vbuf_cap;
-    uint32_t                rect_ibuf_cap;
+    SDL_GPUBuffer *rect_vbuf;
+    SDL_GPUBuffer *rect_ibuf;
+    uint32_t rect_vbuf_cap;
+    uint32_t rect_ibuf_cap;
 
-    SDL_GPUBuffer          *text_vbuf;
-    SDL_GPUBuffer          *text_ibuf;
-    uint32_t                text_vbuf_cap;
-    uint32_t                text_ibuf_cap;
+    SDL_GPUBuffer *text_vbuf;
+    SDL_GPUBuffer *text_ibuf;
+    uint32_t text_vbuf_cap;
+    uint32_t text_ibuf_cap;
 
-    SDL_GPUTransferBuffer  *staging_tbuf;
-    uint32_t                staging_tbuf_cap;
+    SDL_GPUTransferBuffer *staging_tbuf;
+    uint32_t staging_tbuf_cap;
 
     /* Clay memory */
-    void          *clay_mem;
-    Clay_Context  *clay_ctx;
+    void *clay_mem;
+    Clay_Context *clay_ctx;
 } KilnUI;
 
 /* ---- Public API ---- */

@@ -28,7 +28,8 @@
 #include "ui_internal.h"
 
 /* ---- Style enum ---- */
-typedef enum {
+typedef enum
+{
     TY_DISPLAY = 0,
     TY_H1,
     TY_H2,

@@ -48,76 +48,78 @@
  * ================================================================ */
 
 /* Horizontal row */
-#define UI_ROW(uid, gap) \
-    CLAY(CLAY_SIDI(CLAY_STRING("UIRow"), uid), { \
-        .layout = { \
-            .sizing          = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) }, \
-            .layoutDirection = CLAY_LEFT_TO_RIGHT, \
-            .childAlignment  = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER }, \
-            .childGap        = (uint16_t)(gap), \
-        }, \
-    })
+#define UI_ROW(uid, gap)                                                                                             \
+    CLAY(CLAY_SIDI(CLAY_STRING("UIRow"), uid), {                                                                     \
+                                                   .layout = {                                                       \
+                                                       .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) },        \
+                                                       .layoutDirection = CLAY_LEFT_TO_RIGHT,                        \
+                                                       .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_CENTER }, \
+                                                       .childGap = (uint16_t)(gap),                                  \
+                                                   },                                                                \
+                                               })
 
 /* Vertical column */
-#define UI_COL(uid, gap) \
-    CLAY(CLAY_SIDI(CLAY_STRING("UICol"), uid), { \
-        .layout = { \
-            .sizing          = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) }, \
-            .layoutDirection = CLAY_TOP_TO_BOTTOM, \
-            .childAlignment  = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_TOP }, \
-            .childGap        = (uint16_t)(gap), \
-        }, \
-    })
+#define UI_COL(uid, gap)                                                                                          \
+    CLAY(CLAY_SIDI(CLAY_STRING("UICol"), uid), {                                                                  \
+                                                   .layout = {                                                    \
+                                                       .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },    \
+                                                       .layoutDirection = CLAY_TOP_TO_BOTTOM,                     \
+                                                       .childAlignment = { CLAY_ALIGN_X_LEFT, CLAY_ALIGN_Y_TOP }, \
+                                                       .childGap = (uint16_t)(gap),                               \
+                                                   },                                                             \
+                                               })
 
 /* Centered container */
-#define UI_CENTER(uid) \
-    CLAY(CLAY_SIDI(CLAY_STRING("UICenter"), uid), { \
-        .layout = { \
-            .sizing         = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) }, \
-            .childAlignment = { CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER }, \
-        }, \
-    })
+#define UI_CENTER(uid)                                                                                                    \
+    CLAY(CLAY_SIDI(CLAY_STRING("UICenter"), uid), {                                                                       \
+                                                      .layout = {                                                         \
+                                                          .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },         \
+                                                          .childAlignment = { CLAY_ALIGN_X_CENTER, CLAY_ALIGN_Y_CENTER }, \
+                                                      },                                                                  \
+                                                  })
 
 /* Flex-grow spacer */
-#define UI_SPACER(uid) \
-    CLAY(CLAY_SIDI(CLAY_STRING("UISpacer"), uid), { \
-        .layout = { \
-            .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(1) }, \
-        }, \
-    }) {}
+#define UI_SPACER(uid)                                                                                             \
+    CLAY(CLAY_SIDI(CLAY_STRING("UISpacer"), uid), {                                                                \
+                                                      .layout = {                                                  \
+                                                          .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIXED(1) }, \
+                                                      },                                                           \
+                                                  })                                                               \
+    {                                                                                                              \
+    }
 
 /* Padded surface panel / card */
-#define UI_PANEL(uid, pad, gap) \
-    CLAY(CLAY_SIDI(CLAY_STRING("UIPanel"), uid), { \
-        .layout = { \
-            .sizing          = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) }, \
-            .layoutDirection = CLAY_TOP_TO_BOTTOM, \
-            .childGap        = (uint16_t)(gap), \
-            .padding         = { (uint16_t)(pad), (uint16_t)(pad), \
-                                 (uint16_t)(pad), (uint16_t)(pad) }, \
-        }, \
-        .backgroundColor = ds_theme->surface0, \
-        .cornerRadius    = CLAY_CORNER_RADIUS(DS_RADIUS_LG), \
-    })
+#define UI_PANEL(uid, pad, gap)                                                                                 \
+    CLAY(CLAY_SIDI(CLAY_STRING("UIPanel"), uid), {                                                              \
+                                                     .layout = {                                                \
+                                                         .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_FIT(0) }, \
+                                                         .layoutDirection = CLAY_TOP_TO_BOTTOM,                 \
+                                                         .childGap = (uint16_t)(gap),                           \
+                                                         .padding = { (uint16_t)(pad), (uint16_t)(pad),         \
+                                                                      (uint16_t)(pad), (uint16_t)(pad) },       \
+                                                     },                                                         \
+                                                     .backgroundColor = ds_theme->surface0,                     \
+                                                     .cornerRadius = CLAY_CORNER_RADIUS(DS_RADIUS_LG),          \
+                                                 })
 
 /* Vertical scroll column */
-#define UI_SCROLLCOL(uid, gap) \
-    CLAY(CLAY_SIDI(CLAY_STRING("UIScroll"), uid), { \
-        .layout = { \
-            .sizing          = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) }, \
-            .layoutDirection = CLAY_TOP_TO_BOTTOM, \
-            .childGap        = (uint16_t)(gap), \
-        }, \
-        .clip = { .vertical = true }, \
-    })
+#define UI_SCROLLCOL(uid, gap)                                                                                    \
+    CLAY(CLAY_SIDI(CLAY_STRING("UIScroll"), uid), {                                                               \
+                                                      .layout = {                                                 \
+                                                          .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) }, \
+                                                          .layoutDirection = CLAY_TOP_TO_BOTTOM,                  \
+                                                          .childGap = (uint16_t)(gap),                            \
+                                                      },                                                          \
+                                                      .clip = { .vertical = true },                               \
+                                                  })
 
 /* Z-layered floating stack (position children via .floating) */
-#define UI_STACK(uid) \
-    CLAY(CLAY_SIDI(CLAY_STRING("UIStack"), uid), { \
-        .layout = { \
-            .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) }, \
-        }, \
-    })
+#define UI_STACK(uid)                                                                                            \
+    CLAY(CLAY_SIDI(CLAY_STRING("UIStack"), uid), {                                                               \
+                                                     .layout = {                                                 \
+                                                         .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) }, \
+                                                     },                                                          \
+                                                 })
 
 /* ================================================================
  * Utility: padded text label (quick use without ID tracking)
@@ -125,8 +127,9 @@
 static inline void UI_Text(int uid, const char *text, uint16_t font_size, Clay_Color color)
 {
     CLAY(CLAY_SIDI(CLAY_STRING("UIText"), uid), {
-        .layout = { .sizing = { CLAY_SIZING_FIT(0), CLAY_SIZING_FIT(0) } },
-    }) {
+                                                    .layout = { .sizing = { CLAY_SIZING_FIT(0), CLAY_SIZING_FIT(0) } },
+                                                })
+    {
         CLAY_TEXT(UI__str(text), { .textColor = color, .fontSize = font_size });
     }
 }
@@ -137,12 +140,14 @@ static inline void UI_Text(int uid, const char *text, uint16_t font_size, Clay_C
 static inline void UI_ColorSwatch(int uid, Clay_Color color, int w, int h, int radius)
 {
     CLAY(CLAY_SIDI(CLAY_STRING("UISwatch"), uid), {
-        .layout = {
-            .sizing = { CLAY_SIZING_FIXED((float)w), CLAY_SIZING_FIXED((float)h) },
-        },
-        .backgroundColor = color,
-        .cornerRadius    = CLAY_CORNER_RADIUS((float)radius),
-    }) {}
+                                                      .layout = {
+                                                          .sizing = { CLAY_SIZING_FIXED((float)w), CLAY_SIZING_FIXED((float)h) },
+                                                      },
+                                                      .backgroundColor = color,
+                                                      .cornerRadius = CLAY_CORNER_RADIUS((float)radius),
+                                                  })
+    {
+    }
 }
 
 #endif /* UI_H */

@@ -17,17 +17,20 @@
 #include <string.h>
 
 /* ---- Orthographic projection (column-major, Y-down) ---- */
-typedef struct { float m[4][4]; } Mat4;
+typedef struct
+{
+    float m[4][4];
+} Mat4;
 
 static Mat4 ortho_proj(float w, float h)
 {
     Mat4 m = { 0 };
-    m.m[0][0] =  2.0f / w;
+    m.m[0][0] = 2.0f / w;
     m.m[1][1] = -2.0f / h;
     m.m[2][2] = -1.0f;
     m.m[3][0] = -1.0f;
-    m.m[3][1] =  1.0f;
-    m.m[3][3] =  1.0f;
+    m.m[3][1] = 1.0f;
+    m.m[3][3] = 1.0f;
     return m;
 }
 
@@ -37,44 +40,61 @@ static Mat4 ortho_proj(float w, float h)
 static void ensure_gpu_buffer(SDL_GPUDevice *gpu, SDL_GPUBuffer **buf, uint32_t *cap,
                               uint32_t needed, SDL_GPUBufferUsageFlags usage)
 {
-    if (*cap >= needed) return;
-    if (*buf) SDL_ReleaseGPUBuffer(gpu, *buf);
-    uint32_t nc = needed + needed / 2;   /* 1.5x over-alloc to amortise growth */
+    if (*cap >= needed)
+        return;
+    if (*buf)
+        SDL_ReleaseGPUBuffer(gpu, *buf);
+    uint32_t nc = needed + needed / 2; /* 1.5x over-alloc to amortise growth */
     *buf = SDL_CreateGPUBuffer(gpu, &(SDL_GPUBufferCreateInfo){ .usage = usage, .size = nc });
-    if (!*buf) { SDL_Log("ensure_gpu_buffer: %s", SDL_GetError()); *buf = NULL; *cap = 0; return; }
+    if (!*buf) {
+        SDL_Log("ensure_gpu_buffer: %s", SDL_GetError());
+        *buf = NULL;
+        *cap = 0;
+        return;
+    }
     *cap = nc;
 }
 
 static void ensure_transfer_buffer(SDL_GPUDevice *gpu, SDL_GPUTransferBuffer **tbuf,
                                    uint32_t *cap, uint32_t needed)
 {
-    if (*cap >= needed) return;
-    if (*tbuf) SDL_ReleaseGPUTransferBuffer(gpu, *tbuf);
+    if (*cap >= needed)
+        return;
+    if (*tbuf)
+        SDL_ReleaseGPUTransferBuffer(gpu, *tbuf);
     uint32_t nc = needed + needed / 2;
     *tbuf = SDL_CreateGPUTransferBuffer(gpu,
-        &(SDL_GPUTransferBufferCreateInfo){ .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = nc });
-    if (!*tbuf) { SDL_Log("ensure_transfer_buffer: %s", SDL_GetError()); *tbuf = NULL; *cap = 0; return; }
+                                        &(SDL_GPUTransferBufferCreateInfo){ .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = nc });
+    if (!*tbuf) {
+        SDL_Log("ensure_transfer_buffer: %s", SDL_GetError());
+        *tbuf = NULL;
+        *cap = 0;
+        return;
+    }
     *cap = nc;
 }
 
 /* ---- Rectangle batch (static storage shared across frames) ---- */
 static VertexRect s_rect_verts[MAX_RECTS * 4];
-static Uint16     s_rect_idx  [MAX_RECTS * 6];
-static int        s_rect_count;
+static Uint16 s_rect_idx[MAX_RECTS * 6];
+static int s_rect_count;
 
-static uint32_t hash_combine(uint32_t h, uint32_t v) {
+static uint32_t hash_combine(uint32_t h, uint32_t v)
+{
     h ^= v;
     h *= 16777619u;
     return h;
 }
 
-static inline uint32_t float_bits(float f) {
+static inline uint32_t float_bits(float f)
+{
     uint32_t u;
     memcpy(&u, &f, sizeof(u));
     return u;
 }
 
-static uint32_t hash_rect_cmd(Clay_BoundingBox bb, Clay_Color c, Clay_CornerRadius cr, float scale) {
+static uint32_t hash_rect_cmd(Clay_BoundingBox bb, Clay_Color c, Clay_CornerRadius cr, float scale)
+{
     uint32_t h = 2166136261u;
     h = hash_combine(h, float_bits(bb.x));
     h = hash_combine(h, float_bits(bb.y));
@@ -92,7 +112,8 @@ static uint32_t hash_rect_cmd(Clay_BoundingBox bb, Clay_Color c, Clay_CornerRadi
     return h;
 }
 
-typedef struct {
+typedef struct
+{
     uint32_t hash;
     bool valid;
 } VertexCacheEntry;
@@ -103,24 +124,28 @@ static bool s_idx_initialized = false;
 static void push_rect_at(int ri, float x, float y, float w, float h,
                          Clay_Color c, Clay_CornerRadius cr, float scale)
 {
-    if (ri >= MAX_RECTS) return;
-    x *= scale; y *= scale; w *= scale; h *= scale;
+    if (ri >= MAX_RECTS)
+        return;
+    x *= scale;
+    y *= scale;
+    w *= scale;
+    h *= scale;
 
     /* Premultiplied alpha */
     float nr = (c.r / 255.f) * c.a / 255.f, ng = (c.g / 255.f) * c.a / 255.f;
     float nb = (c.b / 255.f) * c.a / 255.f, na = c.a / 255.f;
 
     float max_r = fminf(w, h) * 0.5f;
-    float rtl = fminf(cr.topLeft    * scale, max_r);
-    float rtr = fminf(cr.topRight   * scale, max_r);
+    float rtl = fminf(cr.topLeft * scale, max_r);
+    float rtr = fminf(cr.topRight * scale, max_r);
     float rbl = fminf(cr.bottomLeft * scale, max_r);
-    float rbr = fminf(cr.bottomRight* scale, max_r);
+    float rbr = fminf(cr.bottomRight * scale, max_r);
 
     int vi = ri * 4;
-    s_rect_verts[vi+0] = (VertexRect){ x,   y,   0, 0, w, h, rtl, rtr, rbl, rbr, nr, ng, nb, na };
-    s_rect_verts[vi+1] = (VertexRect){ x+w, y,   w, 0, w, h, rtl, rtr, rbl, rbr, nr, ng, nb, na };
-    s_rect_verts[vi+2] = (VertexRect){ x+w, y+h, w, h, w, h, rtl, rtr, rbl, rbr, nr, ng, nb, na };
-    s_rect_verts[vi+3] = (VertexRect){ x,   y+h, 0, h, w, h, rtl, rtr, rbl, rbr, nr, ng, nb, na };
+    s_rect_verts[vi + 0] = (VertexRect){ x, y, 0, 0, w, h, rtl, rtr, rbl, rbr, nr, ng, nb, na };
+    s_rect_verts[vi + 1] = (VertexRect){ x + w, y, w, 0, w, h, rtl, rtr, rbl, rbr, nr, ng, nb, na };
+    s_rect_verts[vi + 2] = (VertexRect){ x + w, y + h, w, h, w, h, rtl, rtr, rbl, rbr, nr, ng, nb, na };
+    s_rect_verts[vi + 3] = (VertexRect){ x, y + h, 0, h, w, h, rtl, rtr, rbl, rbr, nr, ng, nb, na };
 }
 
 /* Track last TTF font size to avoid redundant TTF_SetFontSize calls. */
@@ -128,7 +153,8 @@ static int s_last_phys_size = 0;
 
 static void set_font_size(KilnUI *ctx, int phys_size)
 {
-    if (phys_size == s_last_phys_size) return;
+    if (phys_size == s_last_phys_size)
+        return;
     KilnUI_set_font_size(ctx, (float)phys_size);
     s_last_phys_size = phys_size;
 }
@@ -136,10 +162,10 @@ static void set_font_size(KilnUI *ctx, int phys_size)
 /* ---- Text batch (one per TEXT command, static to avoid stack bloat) ---- */
 typedef struct
 {
-    VertexTex      verts[256 * 4];
-    Uint16         idx  [256 * 6];
-    int            quad_count;
-    bool           uses_atlas;  /* true = uses texture atlas (single draw call) */
+    VertexTex verts[256 * 4];
+    Uint16 idx[256 * 6];
+    int quad_count;
+    bool uses_atlas; /* true = uses texture atlas (single draw call) */
 } TextBatch;
 
 static TextBatch s_text_batches[MAX_TEXT_CMDS];
@@ -148,31 +174,33 @@ static void build_text_batch(KilnUI *ctx, TextBatch *tb,
                              Clay_BoundingBox bb, Clay_TextRenderData *td, float scale)
 {
     const char *str = td->stringContents.chars;
-    int len         = td->stringContents.length;
-    tb->quad_count  = 0;
-    tb->uses_atlas  = true;  /* default: use atlas */
-    if (!str || len <= 0) return;
+    int len = td->stringContents.length;
+    tb->quad_count = 0;
+    tb->uses_atlas = true; /* default: use atlas */
+    if (!str || len <= 0)
+        return;
 
     int req_size = (td->fontSize > 0) ? td->fontSize : ctx->font_size;
 
     /* Rasterize glyphs at PHYSICAL pixel size for crisp HiDPI rendering.
      * Glyph metrics (w, h, bearing, advance) are then already in physical px. */
     int phys_size = (int)((float)req_size * scale + 0.5f);
-    if (phys_size < 1) phys_size = 1;
+    if (phys_size < 1)
+        phys_size = 1;
     set_font_size(ctx, phys_size);
 
-    float cx = bb.x * scale;                          /* logical → physical */
+    float cx = bb.x * scale; /* logical → physical */
     float cy = bb.y * scale;
 
     float nr = (td->textColor.r / 255.f) * (td->textColor.a / 255.f);
     float ng = (td->textColor.g / 255.f) * (td->textColor.a / 255.f);
     float nb = (td->textColor.b / 255.f) * (td->textColor.a / 255.f);
-    float na =  td->textColor.a / 255.f;
+    float na = td->textColor.a / 255.f;
 
     uint32_t prev_cp = 0;
     for (int i = 0; i < len && tb->quad_count < 256;) {
         uint32_t cp;
-        uint8_t  c = (uint8_t)str[i];
+        uint8_t c = (uint8_t)str[i];
 
         /* Decode one UTF-8 code point with explicit bounds checking.
          * Clay_StringSlice is NOT null-terminated, so reading past `len`
@@ -181,28 +209,26 @@ static void build_text_batch(KilnUI *ctx, TextBatch *tb,
             cp = c;
             i += 1;
         } else if (c < 0xE0) {
-            if (i + 1 >= len) break;                          /* truncated 2-byte seq */
-            cp = (uint32_t)(c & 0x1F) << 6
-               | (uint32_t)((uint8_t)str[i+1] & 0x3F);
+            if (i + 1 >= len)
+                break; /* truncated 2-byte seq */
+            cp = (uint32_t)(c & 0x1F) << 6 | (uint32_t)((uint8_t)str[i + 1] & 0x3F);
             i += 2;
         } else if (c < 0xF0) {
-            if (i + 2 >= len) break;                          /* truncated 3-byte seq */
-            cp = (uint32_t)(c & 0x0F) << 12
-               | (uint32_t)((uint8_t)str[i+1] & 0x3F) << 6
-               | (uint32_t)((uint8_t)str[i+2] & 0x3F);
+            if (i + 2 >= len)
+                break; /* truncated 3-byte seq */
+            cp = (uint32_t)(c & 0x0F) << 12 | (uint32_t)((uint8_t)str[i + 1] & 0x3F) << 6 | (uint32_t)((uint8_t)str[i + 2] & 0x3F);
             i += 3;
         } else {
-            if (i + 3 >= len) break;                          /* truncated 4-byte seq */
-            cp = (uint32_t)(c & 0x07) << 18
-               | (uint32_t)((uint8_t)str[i+1] & 0x3F) << 12
-               | (uint32_t)((uint8_t)str[i+2] & 0x3F) <<  6
-               | (uint32_t)((uint8_t)str[i+3] & 0x3F);
+            if (i + 3 >= len)
+                break; /* truncated 4-byte seq */
+            cp = (uint32_t)(c & 0x07) << 18 | (uint32_t)((uint8_t)str[i + 1] & 0x3F) << 12 | (uint32_t)((uint8_t)str[i + 2] & 0x3F) << 6 | (uint32_t)((uint8_t)str[i + 3] & 0x3F);
             i += 4;
         }
 
         /* Skip null bytes and non-printable control characters.
          * U+0000 is the most common source of "Text has zero width" errors. */
-        if (cp == 0 || cp < 0x20) continue;
+        if (cp == 0 || cp < 0x20)
+            continue;
 
         if (prev_cp) {
             int kern = 0;
@@ -218,45 +244,58 @@ static void build_text_batch(KilnUI *ctx, TextBatch *tb,
             /* Use atlas entry */
             float gx = cx;
             float gy = cy;
-            float gw = gae->w;              /* glyph size already in physical px */
+            float gw = gae->w; /* glyph size already in physical px */
             float gh = gae->h;
 
-            int q  = tb->quad_count;
+            int q = tb->quad_count;
             int vi = q * 4, ii = q * 6;
-            tb->verts[vi+0] = (VertexTex){ gx,    gy,    gae->u0, gae->v0, nr, ng, nb, na };
-            tb->verts[vi+1] = (VertexTex){ gx+gw, gy,    gae->u1, gae->v0, nr, ng, nb, na };
-            tb->verts[vi+2] = (VertexTex){ gx+gw, gy+gh, gae->u1, gae->v1, nr, ng, nb, na };
-            tb->verts[vi+3] = (VertexTex){ gx,    gy+gh, gae->u0, gae->v1, nr, ng, nb, na };
-            tb->idx[ii+0]=vi; tb->idx[ii+1]=vi+1; tb->idx[ii+2]=vi+2;
-            tb->idx[ii+3]=vi; tb->idx[ii+4]=vi+2; tb->idx[ii+5]=vi+3;
+            tb->verts[vi + 0] = (VertexTex){ gx, gy, gae->u0, gae->v0, nr, ng, nb, na };
+            tb->verts[vi + 1] = (VertexTex){ gx + gw, gy, gae->u1, gae->v0, nr, ng, nb, na };
+            tb->verts[vi + 2] = (VertexTex){ gx + gw, gy + gh, gae->u1, gae->v1, nr, ng, nb, na };
+            tb->verts[vi + 3] = (VertexTex){ gx, gy + gh, gae->u0, gae->v1, nr, ng, nb, na };
+            tb->idx[ii + 0] = vi;
+            tb->idx[ii + 1] = vi + 1;
+            tb->idx[ii + 2] = vi + 2;
+            tb->idx[ii + 3] = vi;
+            tb->idx[ii + 4] = vi + 2;
+            tb->idx[ii + 5] = vi + 3;
 
             cx += gae->advance; /* advance in physical px, no scale */
-            if (td->letterSpacing) cx += td->letterSpacing * scale; /* logical px → physical */
+            if (td->letterSpacing)
+                cx += td->letterSpacing * scale; /* logical px → physical */
             tb->quad_count++;
         } else {
             /* Fallback to per-glyph texture */
             const GlyphEntry *ge = GlyphCache_get(&ctx->glyph_cache, ctx->font,
                                                   cp, (uint16_t)phys_size);
-            if (!ge) { cx += phys_size * 0.5f; continue; } /* fallback advance */
+            if (!ge) {
+                cx += phys_size * 0.5f;
+                continue;
+            } /* fallback advance */
 
             float gx = cx;
             float gy = cy;
-            float gw = ge->w;              /* glyph size already in physical px */
+            float gw = ge->w; /* glyph size already in physical px */
             float gh = ge->h;
 
-            int q  = tb->quad_count;
+            int q = tb->quad_count;
             int vi = q * 4, ii = q * 6;
-            tb->verts[vi+0] = (VertexTex){ gx,    gy,    0, 0, nr, ng, nb, na };
-            tb->verts[vi+1] = (VertexTex){ gx+gw, gy,    1, 0, nr, ng, nb, na };
-            tb->verts[vi+2] = (VertexTex){ gx+gw, gy+gh, 1, 1, nr, ng, nb, na };
-            tb->verts[vi+3] = (VertexTex){ gx,    gy+gh, 0, 1, nr, ng, nb, na };
-            tb->idx[ii+0]=vi; tb->idx[ii+1]=vi+1; tb->idx[ii+2]=vi+2;
-            tb->idx[ii+3]=vi; tb->idx[ii+4]=vi+2; tb->idx[ii+5]=vi+3;
+            tb->verts[vi + 0] = (VertexTex){ gx, gy, 0, 0, nr, ng, nb, na };
+            tb->verts[vi + 1] = (VertexTex){ gx + gw, gy, 1, 0, nr, ng, nb, na };
+            tb->verts[vi + 2] = (VertexTex){ gx + gw, gy + gh, 1, 1, nr, ng, nb, na };
+            tb->verts[vi + 3] = (VertexTex){ gx, gy + gh, 0, 1, nr, ng, nb, na };
+            tb->idx[ii + 0] = vi;
+            tb->idx[ii + 1] = vi + 1;
+            tb->idx[ii + 2] = vi + 2;
+            tb->idx[ii + 3] = vi;
+            tb->idx[ii + 4] = vi + 2;
+            tb->idx[ii + 5] = vi + 3;
 
             cx += ge->advance; /* advance in physical px, no scale */
-            if (td->letterSpacing) cx += td->letterSpacing * scale; /* logical px → physical */
+            if (td->letterSpacing)
+                cx += td->letterSpacing * scale; /* logical px → physical */
             tb->quad_count++;
-            tb->uses_atlas = false;  /* at least one glyph uses per-glyph texture */
+            tb->uses_atlas = false; /* at least one glyph uses per-glyph texture */
         }
     }
 }
@@ -272,7 +311,7 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
     int pw, ph;
     SDL_GetWindowSizeInPixels(ctx->window, &pw, &ph);
     float scale = ctx->dpi_scale;
-    Mat4  proj  = ortho_proj((float)pw, (float)ph);
+    Mat4 proj = ortho_proj((float)pw, (float)ph);
 
     /* ===== Phase 1: Collect geometry, map each cmd to its slot ===== */
 #define MAX_CMDS 8192
@@ -284,13 +323,20 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
         SDL_Log("KilnUI_render: command count %d exceeds MAX_CMDS %d, truncating",
                 cmds.length, MAX_CMDS);
     }
-    for (int i = 0; i < n; i++) { cmd_to_rect[i] = -1; cmd_to_text[i] = -1; }
+    for (int i = 0; i < n; i++) {
+        cmd_to_rect[i] = -1;
+        cmd_to_text[i] = -1;
+    }
 
     if (!s_idx_initialized) {
         for (int i = 0; i < MAX_RECTS; i++) {
             int vi = i * 4, ii = i * 6;
-            s_rect_idx[ii+0]=vi; s_rect_idx[ii+1]=vi+1; s_rect_idx[ii+2]=vi+2;
-            s_rect_idx[ii+3]=vi; s_rect_idx[ii+4]=vi+2; s_rect_idx[ii+5]=vi+3;
+            s_rect_idx[ii + 0] = vi;
+            s_rect_idx[ii + 1] = vi + 1;
+            s_rect_idx[ii + 2] = vi + 2;
+            s_rect_idx[ii + 3] = vi;
+            s_rect_idx[ii + 4] = vi + 2;
+            s_rect_idx[ii + 5] = vi + 3;
         }
         s_idx_initialized = true;
     }
@@ -339,8 +385,8 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
             int ri = s_rect_count++;
             cmd_to_rect[i] = ri;
             Clay_BoundingBox bb = cmd->boundingBox;
-            Clay_Color       c  = cmd->renderData.border.color;
-            Clay_CornerRadius cr = {0};
+            Clay_Color c = cmd->renderData.border.color;
+            Clay_CornerRadius cr = { 0 };
             uint32_t hash = hash_rect_cmd(bb, c, cr, scale) ^ 0xBEEFu;
             if (!s_vcache[ri].valid || s_vcache[ri].hash != hash) {
                 push_rect_at(ri, bb.x, bb.y, bb.width, bb.height, c, cr, scale);
@@ -351,7 +397,8 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
     }
 
     for (int ri = s_rect_count; ri < MAX_RECTS; ri++) {
-        if (!s_vcache[ri].valid) break;
+        if (!s_vcache[ri].valid)
+            break;
         s_vcache[ri].valid = false;
     }
 
@@ -383,7 +430,8 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
     uint32_t total = rv_sz + ri_sz + tv_sz + ti_sz;
 
     SDL_GPUCommandBuffer *cmdbuf = SDL_AcquireGPUCommandBuffer(ctx->gpu);
-    if (!cmdbuf) return;
+    if (!cmdbuf)
+        return;
 
     /* Flush glyph uploads using the same command buffer (merged path) */
     GlyphCache_flush_uploads_ex(&ctx->glyph_cache, cmdbuf);
@@ -401,12 +449,18 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
         ensure_transfer_buffer(ctx->gpu, &ctx->staging_tbuf,
                                &ctx->staging_tbuf_cap, total);
 
-        uint8_t *m   = SDL_MapGPUTransferBuffer(ctx->gpu, ctx->staging_tbuf, true);
+        uint8_t *m = SDL_MapGPUTransferBuffer(ctx->gpu, ctx->staging_tbuf, true);
         uint32_t off = 0;
         uint32_t off_rv = off;
-        if (rv_sz) { SDL_memcpy(m + off, s_rect_verts, rv_sz); off += rv_sz; }
+        if (rv_sz) {
+            SDL_memcpy(m + off, s_rect_verts, rv_sz);
+            off += rv_sz;
+        }
         uint32_t off_ri = off;
-        if (ri_sz) { SDL_memcpy(m + off, s_rect_idx,   ri_sz); off += ri_sz; }
+        if (ri_sz) {
+            SDL_memcpy(m + off, s_rect_idx, ri_sz);
+            off += ri_sz;
+        }
         uint32_t off_tv = off;
         for (int t = 0; t < tb_count; t++) {
             int qc = s_text_batches[t].quad_count;
@@ -426,31 +480,37 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
         SDL_UnmapGPUTransferBuffer(ctx->gpu, ctx->staging_tbuf);
 
         SDL_GPUCopyPass *cp = SDL_BeginGPUCopyPass(cmdbuf);
-        if (rv_sz) SDL_UploadToGPUBuffer(cp,
-            &(SDL_GPUTransferBufferLocation){ .transfer_buffer = ctx->staging_tbuf, .offset = off_rv },
-            &(SDL_GPUBufferRegion){ .buffer = ctx->rect_vbuf, .size = rv_sz }, true);
-        if (ri_sz) SDL_UploadToGPUBuffer(cp,
-            &(SDL_GPUTransferBufferLocation){ .transfer_buffer = ctx->staging_tbuf, .offset = off_ri },
-            &(SDL_GPUBufferRegion){ .buffer = ctx->rect_ibuf, .size = ri_sz }, true);
-        if (tv_sz) SDL_UploadToGPUBuffer(cp,
-            &(SDL_GPUTransferBufferLocation){ .transfer_buffer = ctx->staging_tbuf, .offset = off_tv },
-            &(SDL_GPUBufferRegion){ .buffer = ctx->text_vbuf, .size = tv_sz }, true);
-        if (ti_sz) SDL_UploadToGPUBuffer(cp,
-            &(SDL_GPUTransferBufferLocation){ .transfer_buffer = ctx->staging_tbuf, .offset = off_ti },
-            &(SDL_GPUBufferRegion){ .buffer = ctx->text_ibuf, .size = ti_sz }, true);
+        if (rv_sz)
+            SDL_UploadToGPUBuffer(cp,
+                                  &(SDL_GPUTransferBufferLocation){ .transfer_buffer = ctx->staging_tbuf, .offset = off_rv },
+                                  &(SDL_GPUBufferRegion){ .buffer = ctx->rect_vbuf, .size = rv_sz }, true);
+        if (ri_sz)
+            SDL_UploadToGPUBuffer(cp,
+                                  &(SDL_GPUTransferBufferLocation){ .transfer_buffer = ctx->staging_tbuf, .offset = off_ri },
+                                  &(SDL_GPUBufferRegion){ .buffer = ctx->rect_ibuf, .size = ri_sz }, true);
+        if (tv_sz)
+            SDL_UploadToGPUBuffer(cp,
+                                  &(SDL_GPUTransferBufferLocation){ .transfer_buffer = ctx->staging_tbuf, .offset = off_tv },
+                                  &(SDL_GPUBufferRegion){ .buffer = ctx->text_vbuf, .size = tv_sz }, true);
+        if (ti_sz)
+            SDL_UploadToGPUBuffer(cp,
+                                  &(SDL_GPUTransferBufferLocation){ .transfer_buffer = ctx->staging_tbuf, .offset = off_ti },
+                                  &(SDL_GPUBufferRegion){ .buffer = ctx->text_ibuf, .size = ti_sz }, true);
         SDL_EndGPUCopyPass(cp);
     }
 
-
     SDL_GPUTexture *swapchain = NULL;
     SDL_WaitAndAcquireGPUSwapchainTexture(cmdbuf, ctx->window, &swapchain, NULL, NULL);
-    if (!swapchain) { SDL_SubmitGPUCommandBuffer(cmdbuf); return; }
+    if (!swapchain) {
+        SDL_SubmitGPUCommandBuffer(cmdbuf);
+        return;
+    }
 
     SDL_GPUColorTargetInfo ct = {
-        .texture     = swapchain,
+        .texture = swapchain,
         .clear_color = { 0.08f, 0.08f, 0.12f, 1.0f },
-        .load_op     = SDL_GPU_LOADOP_CLEAR,
-        .store_op    = SDL_GPU_STOREOP_STORE,
+        .load_op = SDL_GPU_LOADOP_CLEAR,
+        .store_op = SDL_GPU_STOREOP_STORE,
     };
     SDL_GPURenderPass *rp = SDL_BeginGPURenderPass(cmdbuf, &ct, 1, NULL);
 
@@ -461,17 +521,19 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
         Clay_RenderCommand *cmd = Clay_RenderCommandArray_Get(&cmds, i);
         switch (cmd->commandType) {
 
-        case CLAY_RENDER_COMMAND_TYPE_RECTANGLE: {
+        case CLAY_RENDER_COMMAND_TYPE_RECTANGLE:
+        {
             int ri = cmd_to_rect[i];
-            if (ri < 0 || !ctx->rect_vbuf) break;
+            if (ri < 0 || !ctx->rect_vbuf)
+                break;
             if (active_pipe != ctx->pipeline_rect) {
                 SDL_BindGPUGraphicsPipeline(rp, ctx->pipeline_rect);
                 SDL_PushGPUVertexUniformData(cmdbuf, 0, &proj, sizeof(proj));
                 SDL_BindGPUVertexBuffers(rp, 0,
-                    &(SDL_GPUBufferBinding){ .buffer = ctx->rect_vbuf }, 1);
+                                         &(SDL_GPUBufferBinding){ .buffer = ctx->rect_vbuf }, 1);
                 SDL_BindGPUIndexBuffer(rp,
-                    &(SDL_GPUBufferBinding){ .buffer = ctx->rect_ibuf },
-                    SDL_GPU_INDEXELEMENTSIZE_16BIT);
+                                       &(SDL_GPUBufferBinding){ .buffer = ctx->rect_ibuf },
+                                       SDL_GPU_INDEXELEMENTSIZE_16BIT);
                 active_pipe = ctx->pipeline_rect;
             }
 
@@ -490,19 +552,22 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
             break;
         }
 
-        case CLAY_RENDER_COMMAND_TYPE_TEXT: {
+        case CLAY_RENDER_COMMAND_TYPE_TEXT:
+        {
             int ti = cmd_to_text[i];
-            if (ti < 0 || !ctx->text_vbuf) break;
+            if (ti < 0 || !ctx->text_vbuf)
+                break;
             TextBatch *tb = &s_text_batches[ti];
-            if (tb->quad_count == 0) break;
+            if (tb->quad_count == 0)
+                break;
             if (active_pipe != ctx->pipeline_text) {
                 SDL_BindGPUGraphicsPipeline(rp, ctx->pipeline_text);
                 SDL_PushGPUVertexUniformData(cmdbuf, 0, &proj, sizeof(proj));
                 SDL_BindGPUVertexBuffers(rp, 0,
-                    &(SDL_GPUBufferBinding){ .buffer = ctx->text_vbuf }, 1);
+                                         &(SDL_GPUBufferBinding){ .buffer = ctx->text_vbuf }, 1);
                 SDL_BindGPUIndexBuffer(rp,
-                    &(SDL_GPUBufferBinding){ .buffer = ctx->text_ibuf },
-                    SDL_GPU_INDEXELEMENTSIZE_16BIT);
+                                       &(SDL_GPUBufferBinding){ .buffer = ctx->text_ibuf },
+                                       SDL_GPU_INDEXELEMENTSIZE_16BIT);
                 active_pipe = ctx->pipeline_text;
             }
             /* vertex_offset rebases 0-based per-batch indices into the combined VBO.
@@ -513,11 +578,12 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
             if (tb->uses_atlas) {
                 /* Texture atlas: single draw call for all glyphs in this text command */
                 SDL_BindGPUFragmentSamplers(rp, 0,
-                    &(SDL_GPUTextureSamplerBinding){
-                        .texture = GlyphAtlas_get_texture(&ctx->glyph_atlas),
-                        .sampler = ctx->sampler_linear }, 1);
+                                            &(SDL_GPUTextureSamplerBinding){
+                                                .texture = GlyphAtlas_get_texture(&ctx->glyph_atlas),
+                                                .sampler = ctx->sampler_linear },
+                                            1);
                 SDL_DrawGPUIndexedPrimitives(rp, 6 * tb->quad_count, 1,
-                    idx_base, vtx_base, 0);
+                                             idx_base, vtx_base, 0);
             } else {
                 /* Fallback: per-glyph textures (legacy path) */
                 for (int q = 0; q < tb->quad_count; q++) {
@@ -526,25 +592,29 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
                     /* Since we don't store per-glyph textures anymore, we'll use atlas */
                     /* This is a fallback that shouldn't normally happen */
                     SDL_BindGPUFragmentSamplers(rp, 0,
-                        &(SDL_GPUTextureSamplerBinding){
-                            .texture = GlyphAtlas_get_texture(&ctx->glyph_atlas),
-                            .sampler = ctx->sampler_linear }, 1);
+                                                &(SDL_GPUTextureSamplerBinding){
+                                                    .texture = GlyphAtlas_get_texture(&ctx->glyph_atlas),
+                                                    .sampler = ctx->sampler_linear },
+                                                1);
                     SDL_DrawGPUIndexedPrimitives(rp, 6, 1,
-                        idx_base + (Uint32)(q * 6), vtx_base, 0);
+                                                 idx_base + (Uint32)(q * 6), vtx_base, 0);
                 }
             }
             break;
         }
 
-        case CLAY_RENDER_COMMAND_TYPE_CUSTOM: {
+        case CLAY_RENDER_COMMAND_TYPE_CUSTOM:
+        {
             KilnUICustomHeader *header = (KilnUICustomHeader *)cmd->renderData.custom.customData;
-            if (!header) break;
+            if (!header)
+                break;
             if (header->type == KILNUI_CUSTOM_SHADOW || header->type == KILNUI_CUSTOM_BORDER) {
                 int ri = cmd_to_rect[i];
-                if (ri < 0 || !ctx->rect_vbuf) break;
-                
+                if (ri < 0 || !ctx->rect_vbuf)
+                    break;
+
                 SDL_GPUGraphicsPipeline *target_pipe = (header->type == KILNUI_CUSTOM_SHADOW) ? ctx->pipeline_shadow : ctx->pipeline_border;
-                
+
                 if (active_pipe != target_pipe) {
                     SDL_BindGPUGraphicsPipeline(rp, target_pipe);
                     SDL_PushGPUVertexUniformData(cmdbuf, 0, &proj, sizeof(proj));
@@ -552,45 +622,47 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
                     SDL_BindGPUIndexBuffer(rp, &(SDL_GPUBufferBinding){ .buffer = ctx->rect_ibuf }, SDL_GPU_INDEXELEMENTSIZE_16BIT);
                     active_pipe = target_pipe;
                 }
-                
+
                 if (header->type == KILNUI_CUSTOM_SHADOW) {
                     KilnUICustomShadow *sh = (KilnUICustomShadow *)header;
                     float udata[4] = { sh->offset_x * scale, sh->offset_y * scale, sh->blur_radius * scale, sh->spread * scale };
                     SDL_PushGPUFragmentUniformData(cmdbuf, 0, udata, sizeof(udata));
                 } else if (header->type == KILNUI_CUSTOM_BORDER) {
                     KilnUICustomBorder *b = (KilnUICustomBorder *)header;
-                    float udata[8] = { 
+                    float udata[8] = {
                         b->width_top * scale, b->width_right * scale, b->width_bottom * scale, b->width_left * scale,
-                        b->dash_length * scale, b->dash_gap * scale, 0.0f, 0.0f 
+                        b->dash_length * scale, b->dash_gap * scale, 0.0f, 0.0f
                     };
                     SDL_PushGPUFragmentUniformData(cmdbuf, 0, udata, sizeof(udata));
                 }
-                
+
                 SDL_DrawGPUIndexedPrimitives(rp, 6, 1, (Uint32)(ri * 6), 0, 0);
             }
             break;
         }
 
-        case CLAY_RENDER_COMMAND_TYPE_BORDER: {
+        case CLAY_RENDER_COMMAND_TYPE_BORDER:
+        {
             int ri = cmd_to_rect[i];
-            if (ri < 0 || !ctx->rect_vbuf) break;
+            if (ri < 0 || !ctx->rect_vbuf)
+                break;
             if (active_pipe != ctx->pipeline_border) {
                 SDL_BindGPUGraphicsPipeline(rp, ctx->pipeline_border);
                 SDL_PushGPUVertexUniformData(cmdbuf, 0, &proj, sizeof(proj));
                 SDL_BindGPUVertexBuffers(rp, 0,
-                    &(SDL_GPUBufferBinding){ .buffer = ctx->rect_vbuf }, 1);
+                                         &(SDL_GPUBufferBinding){ .buffer = ctx->rect_vbuf }, 1);
                 SDL_BindGPUIndexBuffer(rp,
-                    &(SDL_GPUBufferBinding){ .buffer = ctx->rect_ibuf },
-                    SDL_GPU_INDEXELEMENTSIZE_16BIT);
+                                       &(SDL_GPUBufferBinding){ .buffer = ctx->rect_ibuf },
+                                       SDL_GPU_INDEXELEMENTSIZE_16BIT);
                 active_pipe = ctx->pipeline_border;
             }
             Clay_BorderRenderData *bd = &cmd->renderData.border;
             /* uniform layout: top, right, bottom, left, dashLength, dashGap */
             float udata[8] = {
-                (float)bd->width.top    * scale,
-                (float)bd->width.right  * scale,
+                (float)bd->width.top * scale,
+                (float)bd->width.right * scale,
                 (float)bd->width.bottom * scale,
-                (float)bd->width.left   * scale,
+                (float)bd->width.left * scale,
                 0.0f, 0.0f, 0.0f, 0.0f
             };
             SDL_PushGPUFragmentUniformData(cmdbuf, 0, udata, sizeof(udata));
@@ -598,7 +670,8 @@ void KilnUI_render(KilnUI *ctx, Clay_RenderCommandArray cmds)
             break;
         }
 
-        case CLAY_RENDER_COMMAND_TYPE_SCISSOR_START: {
+        case CLAY_RENDER_COMMAND_TYPE_SCISSOR_START:
+        {
             Clay_BoundingBox sb = cmd->boundingBox;
             SDL_Rect sc = { (int)(sb.x * scale), (int)(sb.y * scale),
                             (int)(sb.width * scale), (int)(sb.height * scale) };
