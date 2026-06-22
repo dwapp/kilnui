@@ -244,6 +244,40 @@ static void form_panel(void)
         }
 
         UI_Progress(ID_PROGRESS, "Progress", g_progress, 1.0f);
+
+        /* Progress variants showcase */
+        TY_Text(70, "Progress Variants", TY_CAPTION);
+
+        UIProgressOpts opts_default = { .variant = UI_PROGRESS_DEFAULT, .show_percentage = true };
+        UI_ProgressEx(ID_PROGRESS + 1, "Default", g_progress, 1.0f, &opts_default);
+
+        UIProgressOpts opts_success = { .variant = UI_PROGRESS_SUCCESS, .show_percentage = true };
+        UI_ProgressEx(ID_PROGRESS + 2, "Success", g_progress, 1.0f, &opts_success);
+
+        UIProgressOpts opts_warning = { .variant = UI_PROGRESS_WARNING, .show_percentage = true };
+        UI_ProgressEx(ID_PROGRESS + 3, "Warning", g_progress, 1.0f, &opts_warning);
+
+        UIProgressOpts opts_error = { .variant = UI_PROGRESS_ERROR, .show_percentage = true };
+        UI_ProgressEx(ID_PROGRESS + 4, "Error", g_progress, 1.0f, &opts_error);
+
+        UIProgressOpts opts_info = { .variant = UI_PROGRESS_INFO, .show_percentage = true };
+        UI_ProgressEx(ID_PROGRESS + 5, "Info", g_progress, 1.0f, &opts_info);
+
+        /* Progress sizes */
+        TY_Text(71, "Progress Sizes", TY_CAPTION);
+
+        UIProgressOpts opts_sm = { .size = UI_PROGRESS_SM };
+        UI_ProgressEx(ID_PROGRESS + 6, "Small", g_progress, 1.0f, &opts_sm);
+
+        UIProgressOpts opts_lg = { .size = UI_PROGRESS_LG, .show_percentage = true };
+        UI_ProgressEx(ID_PROGRESS + 7, "Large", g_progress, 1.0f, &opts_lg);
+
+        /* Indeterminate */
+        TY_Text(72, "Indeterminate", TY_CAPTION);
+
+        UIProgressOpts opts_indet = { .indeterminate = true };
+        UI_ProgressEx(ID_PROGRESS + 8, "Loading...", 0, 0, &opts_indet);
+
         UI_Tooltip(ID_TOOLTIP, "Tooltip: inline bubble using only text and rectangles", true);
     }
 }
@@ -309,7 +343,9 @@ static void ui_build(void)
                                           .layout = {
                                               .sizing = { CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0) },
                                               .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                                              .childGap = 16,
                                           },
+                                          .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() },
                                       })
             {
                 composite_panel();
